@@ -162,6 +162,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div id="v-dashboard" class="view active">
   <div class="stat-grid" id="stats"></div>
   <div id="aging-alerts"></div>
+  <!-- Company overview -->
+  <div class="card" style="margin-bottom:14px;">
+    <h3 style="font-size:13px;font-weight:600;margin-bottom:12px;">Company overview</h3>
+    <div id="company-overview"></div>
+  </div>
   <div class="g2" style="margin-bottom:14px;">
     <div class="card"><h3 style="font-size:13px;font-weight:600;margin-bottom:11px;">Pipeline by division</h3><div id="div-breakdown"></div></div>
     <div class="card"><h3 style="font-size:13px;font-weight:600;margin-bottom:11px;">My tasks today</h3><div id="dash-tasks"></div></div>
@@ -570,6 +575,91 @@ function renderDB(){
   const myT=S.tasks.filter(t=>!t.done&&t.assignee==me&&t.due&&t.due<=addDays(tod,1)).sort((a,b)=>(a.due||'').localeCompare(b.due||'')).slice(0,6);
   document.getElementById('dash-tasks').innerHTML=myT.length?myT.map(t=>{const lc=t.contactId?S.contacts.find(c=>c.id==t.contactId):null;const over=t.due<tod;return`<div style="padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;display:flex;justify-content:space-between;"><div><div style="${over?'color:var(--rd);font-weight:600;':''}">${t.title}</div><div style="font-size:11px;color:var(--text3);">${lc?lc.name+' · ':''} ${t.type||''}</div></div><span style="font-size:11px;font-weight:600;${over?'color:var(--rd);':'color:var(--text2);'}">${t.due}</span></div>`;}).join(''):'<div style="font-size:13px;color:var(--text2);padding:8px 0;">No tasks due today 🎉</div>';
   updateBadge();
+  renderCompanyOverview();
+}
+function renderCompanyOverview(){
+  const el=document.getElementById('company-overview');if(!el)return;
+  const c=S.contacts;
+  const wonV=c.filter(x=>x.stage==='Won').reduce((s,x)=>s+(Number(x.value)||0),0);
+  const lostV=c.filter(x=>x.stage==='Lost').reduce((s,x)=>s+(Number(x.value)||0),0);
+  const pipeV=c.filter(x=>!['Won','Lost'].includes(x.stage)).reduce((s,x)=>s+(Number(x.value)||0),0);
+  const totalV=c.reduce((s,x)=>s+(Number(x.value)||0),0);
+  const weighted=c.filter(x=>!['Won','Lost'].includes(x.stage)).reduce((s,x)=>s+(Number(x.value)||0)*((SPROB[x.stage]||0)/100),0);
+  const won=c.filter(x=>x.stage==='Won').length;
+  const lost=c.filter(x=>x.stage==='Lost').length;
+  const wr=won+lost>0?Math.round(won/(won+lost)*100):0;
+  const divs=['Land Development','Residential Investment Renovations','Residential Investment New Construction','Custom Homes'];
+
+  // Goal progress bars
+  const goals=[
+    {lbl:'Monthly',target:S.goals.monthly||0},
+    {lbl:'Quarterly',target:S.goals.quarterly||0},
+    {lbl:'Annual',target:S.goals.annual||0}
+  ];
+  const goalHtml=goals.filter(g=>g.target>0).map(g=>{
+    const pct=Math.min(100,Math.round(wonV/g.target*100));
+    const remaining=Math.max(0,g.target-wonV);
+    return`<div style="flex:1;min-width:140px;">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+        <span style="font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;">${g.lbl} goal</span>
+        <span style="font-weight:700;color:${pct>=100?'var(--gn)':'#E8401C'};">${pct}%</span>
+      </div>
+      <div class="goal-bar"><div class="goal-fill" style="width:${pct}%;background:${pct>=100?'var(--gn)':'#E8401C'};"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:3px;">
+        <span>$${wonV.toLocaleString()} won</span>
+        <span>${remaining>0?'$'+remaining.toLocaleString()+' to go':'🎉 Goal hit!'}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Division totals
+  const divHtml=divs.map(d=>{
+    const dc=c.filter(x=>x.divisions&&x.divisions.includes(d));
+    const dWon=dc.filter(x=>x.stage==='Won').reduce((s,x)=>s+(Number(x.value)||0),0);
+    const dPipe=dc.filter(x=>!['Won','Lost'].includes(x.stage)).reduce((s,x)=>s+(Number(x.value)||0),0);
+    const dWonCount=dc.filter(x=>x.stage==='Won').length;
+    return`<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <span class="tag ${DC[d]}">${DS[d]}</span>
+        <span style="font-size:12px;color:var(--text2);">${dc.length} contact${dc.length!==1?'s':''} · ${dWonCount} won</span>
+      </div>
+      <div style="display:flex;gap:16px;font-size:12px;">
+        <span>Won: <strong style="color:var(--gn);">$${dWon.toLocaleString()}</strong></span>
+        <span>Pipeline: <strong>$${dPipe.toLocaleString()}</strong></span>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML=`
+    <!-- Top metrics row -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:16px;">
+      <div style="text-align:center;padding:12px;background:var(--gnlt);border-radius:var(--r);">
+        <div style="font-size:11px;color:var(--gn);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Total won</div>
+        <div style="font-size:22px;font-weight:700;color:var(--gn);margin-top:3px;">$${wonV.toLocaleString()}</div>
+        <div style="font-size:11px;color:var(--gn);margin-top:2px;">${won} deal${won!==1?'s':''} · ${wr}% win rate</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:var(--bllt);border-radius:var(--r);">
+        <div style="font-size:11px;color:var(--bl);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Active pipeline</div>
+        <div style="font-size:22px;font-weight:700;color:var(--bl);margin-top:3px;">$${pipeV.toLocaleString()}</div>
+        <div style="font-size:11px;color:var(--bl);margin-top:2px;">Weighted: $${Math.round(weighted).toLocaleString()}</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:var(--rdlt);border-radius:var(--r);">
+        <div style="font-size:11px;color:var(--rd);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Total lost</div>
+        <div style="font-size:22px;font-weight:700;color:var(--rd);margin-top:3px;">$${lostV.toLocaleString()}</div>
+        <div style="font-size:11px;color:var(--rd);margin-top:2px;">${lost} deal${lost!==1?'s':''}</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:var(--bg2);border-radius:var(--r);">
+        <div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Total tracked</div>
+        <div style="font-size:22px;font-weight:700;color:var(--text);margin-top:3px;">$${totalV.toLocaleString()}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">${c.length} contact${c.length!==1?'s':''}</div>
+      </div>
+    </div>
+    <!-- Goal progress bars (only show if goals are set) -->
+    ${goalHtml?`<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;">${goalHtml}</div>`:''}
+    <!-- Division breakdown -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:0 24px;">
+      <div>${divHtml}</div>
+    </div>`;
 }
 function renderFeed(){const el=document.getElementById('activity-feed');if(!el)return;el.innerHTML=S.activity.slice(0,12).map(a=>`<div class="feed-item"><div class="feed-dot"></div><div><div>${a.msg}</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">${mn(a.user)||'System'} · ${a.time}</div></div></div>`).join('')||'<div style="font-size:13px;color:var(--text2);">No activity yet</div>';}
 function renderRadar(){
