@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Benchmark CRM Pro</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#F5F5F3;color:#1a1a18;font-size:14px;}
@@ -135,6 +136,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div class="hdr">
   <div><img src="https://benchmarkcd.github.io/benchmark-crm/logo.png" alt="Benchmark Construction & Development" style="height:36px;width:auto;display:block;"></div>
   <div class="hdr-r">
+    <div id="gmail-status" style="display:flex;align-items:center;gap:6px;cursor:pointer;" onclick="gmailSignIn()" title="Click to connect Gmail">
+      <div id="gmail-dot" style="width:8px;height:8px;border-radius:50%;background:#888;flex-shrink:0;"></div>
+      <span id="gmail-label" style="font-size:11px;color:#aaa;">Connect Gmail</span>
+    </div>
     <div id="save-dot" style="width:8px;height:8px;border-radius:50%;background:#5DCAA5;opacity:0;transition:opacity .3s;flex-shrink:0;" title="Saved"></div>
     <span id="hdr-ov" style="display:none;" class="badge badge-red" onclick="showView('tasks',navBtn(3));setVal('tf','overdue');renderTasks();"></span>
     <span id="hdr-ag" style="display:none;" class="badge badge-am"></span>
@@ -413,6 +418,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   </div>
   <div id="imp-s3" style="display:none;"><div id="imp-results"></div><div class="m-actions"><button class="btn btn-primary" onclick="closeModal('import-modal');resetImp();showView('contacts',navBtn(1));">View contacts</button></div></div>
   <div id="imp-actions" class="m-actions"><button class="btn" onclick="closeModal('import-modal');resetImp();">Cancel</button></div>
+</div></div>
+
+<!-- Gmail compose modal -->
+<div class="modal-overlay" id="gmail-modal"><div class="modal modal-lg">
+  <h2>✉ Send email</h2>
+  <div id="gmail-auth-warning" style="display:none;background:var(--amlt);border:1px solid var(--am);border-radius:var(--r);padding:12px;font-size:13px;color:var(--am);margin-bottom:14px;">
+    ⚠️ You need to connect your Gmail account first. <button class="btn btn-sm btn-warn" onclick="gmailSignIn()">Connect Gmail</button>
+  </div>
+  <div class="fg"><label>From</label><input id="gm-from" type="text" readonly style="background:var(--bg2);color:var(--text2);"></div>
+  <div class="fg"><label>To</label><input id="gm-to" type="email"></div>
+  <div class="fg"><label>CC</label><input id="gm-cc" type="email" placeholder="Optional"></div>
+  <div class="fg"><label>Subject</label><input id="gm-subject" type="text"></div>
+  <div style="margin-bottom:8px;">
+    <label style="font-size:12px;color:var(--text2);font-weight:500;display:block;margin-bottom:5px;">Load drip template</label>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button class="btn btn-sm" onclick="loadDripTemplate('Contact')">Stage 1: Intro</button>
+      <button class="btn btn-sm" onclick="loadDripTemplate('Discovery Meeting')">Stage 2: Discovery</button>
+      <button class="btn btn-sm" onclick="loadDripTemplate('Strategy Meeting')">Stage 3: Strategy</button>
+      <button class="btn btn-sm" onclick="loadDripTemplate('Proposal')">Stage 4: Proposal</button>
+    </div>
+  </div>
+  <div class="fg"><label>Body</label><textarea id="gm-body" style="min-height:220px;font-family:inherit;line-height:1.6;"></textarea></div>
+  <div id="gm-send-status" style="font-size:13px;margin-bottom:8px;display:none;"></div>
+  <div class="m-actions">
+    <button class="btn" onclick="closeModal('gmail-modal')">Cancel</button>
+    <button class="btn btn-primary" onclick="sendGmail()">Send email</button>
+  </div>
 </div></div>
 
 <!-- Detail -->
@@ -983,7 +1015,10 @@ function showContact(id){
           ${canEdit()?`<button class="btn btn-sm" style="margin-top:8px;" onclick="openTaskModal(${id})">+ Add task</button>`:''}
         </div>
         <div class="detail-sec"><h4>Communications</h4>
-          ${canEdit()?`<button class="btn btn-sm btn-primary" onclick="openCommModal(${id})">+ Log call/email/SMS</button><div style="margin-top:10px;">${commHtml}</div>`:`<div>${commHtml}</div>`}
+          ${canEdit()?`<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;">
+            <button class="btn btn-sm btn-primary" onclick="openCommModal(${id})">+ Log call/email/SMS</button>
+            ${c.email?`<button class="btn btn-sm btn-success" onclick="openGmailCompose(${id})">✉ Send email</button>`:''}
+          </div><div style="margin-top:10px;">${commHtml}</div>`:`<div>${commHtml}</div>`}
         </div>
       </div>
     </div>
@@ -1078,6 +1113,182 @@ function runImport(){
 }
 function resetImp(){csvR=[];csvH=[];['imp-s1','imp-actions'].forEach(id=>document.getElementById(id).style.display='');['imp-s2','imp-s3'].forEach(id=>document.getElementById(id).style.display='none');try{document.getElementById('imp-file').value='';}catch(e){}setImpSrc('gs');}
 
+
+// ── GMAIL INTEGRATION ──
+const GMAIL_CLIENT_ID='474158082238-a2ljv37029b8uvt5v0td8buc4e4b3a4g.apps.googleusercontent.com';
+const GMAIL_SCOPES='https://www.googleapis.com/auth/gmail.send';
+let gmailAccessToken=null;
+let gmailUserEmail=null;
+let gmailTokenClient=null;
+let gmailComposeContactId=null;
+
+function initGmail(){
+  if(!window.google){setTimeout(initGmail,500);return;}
+  gmailTokenClient=google.accounts.oauth2.initTokenClient({
+    client_id:GMAIL_CLIENT_ID,
+    scope:GMAIL_SCOPES,
+    callback:(response)=>{
+      if(response.error){console.error('Gmail auth error:',response.error);return;}
+      gmailAccessToken=response.access_token;
+      // Get user email
+      fetch('https://www.googleapis.com/gmail/v1/users/me/profile',{
+        headers:{'Authorization':'Bearer '+gmailAccessToken}
+      }).then(r=>r.json()).then(data=>{
+        gmailUserEmail=data.emailAddress;
+        updateGmailStatus(true);
+        showInApp('✅ Gmail connected','Sending as '+gmailUserEmail);
+        // Store token expiry
+        const expiry=Date.now()+(response.expires_in*1000);
+        sessionStorage.setItem('gmail_token',gmailAccessToken);
+        sessionStorage.setItem('gmail_email',gmailUserEmail);
+        sessionStorage.setItem('gmail_expiry',expiry);
+      }).catch(e=>console.error('Profile error:',e));
+    }
+  });
+  // Restore session token if still valid
+  const storedToken=sessionStorage.getItem('gmail_token');
+  const storedEmail=sessionStorage.getItem('gmail_email');
+  const storedExpiry=sessionStorage.getItem('gmail_expiry');
+  if(storedToken&&storedEmail&&storedExpiry&&Date.now()<parseInt(storedExpiry)){
+    gmailAccessToken=storedToken;
+    gmailUserEmail=storedEmail;
+    updateGmailStatus(true);
+  }
+}
+
+function updateGmailStatus(connected){
+  const dot=document.getElementById('gmail-dot');
+  const lbl=document.getElementById('gmail-label');
+  if(connected){
+    dot.style.background='#5DCAA5';
+    lbl.textContent=gmailUserEmail||'Gmail connected';
+    lbl.style.color='#5DCAA5';
+    document.getElementById('gmail-status').title='Gmail connected as '+gmailUserEmail+' — click to switch account';
+  }else{
+    dot.style.background='#888';
+    lbl.textContent='Connect Gmail';
+    lbl.style.color='#aaa';
+  }
+}
+
+function gmailSignIn(){
+  if(!gmailTokenClient){alert('Gmail is still loading. Please wait a moment and try again.');return;}
+  gmailTokenClient.requestAccessToken({prompt:'consent'});
+}
+
+function openGmailCompose(contactId){
+  gmailComposeContactId=contactId;
+  const c=S.contacts.find(x=>x.id==contactId);
+  if(!c)return;
+  // Check auth
+  const authWarn=document.getElementById('gmail-auth-warning');
+  if(!gmailAccessToken){
+    authWarn.style.display='block';
+  }else{
+    authWarn.style.display='none';
+  }
+  // Pre-fill fields
+  document.getElementById('gm-from').value=gmailUserEmail||'(connect Gmail first)';
+  document.getElementById('gm-to').value=c.email||'';
+  document.getElementById('gm-cc').value='';
+  // Auto-load the right drip template for their current stage
+  const stageTemplate=c.stage;
+  loadDripTemplate(stageTemplate,c);
+  document.getElementById('gm-send-status').style.display='none';
+  document.getElementById('gmail-modal').classList.add('open');
+}
+
+function loadDripTemplate(stage,contact){
+  const c=contact||(gmailComposeContactId?S.contacts.find(x=>x.id==gmailComposeContactId):null);
+  const drip=DRIP.find(d=>d.stage===stage);
+  if(!drip)return;
+  // Personalize subject and body with contact info
+  let subject=drip.subject;
+  let body=drip.body;
+  if(c){
+    const firstName=c.name?c.name.split(' ')[0]:'[First Name]';
+    const llc=c.llc||'[LLC Name]';
+    const value=c.value?'$'+Number(c.value).toLocaleString():'[Amount]';
+    const division=(c.divisions&&c.divisions[0])||'[Division]';
+    subject=subject.replace(/\[Project Name\]/g,llc).replace(/\[Project\/Goal\]/g,llc);
+    body=body.replace(/\[First Name\]/g,firstName)
+             .replace(/\[LLC Name\]/g,llc)
+             .replace(/\[Amount\]/g,value)
+             .replace(/\[Division\]/g,DS[division]||division)
+             .replace(/\[Your Name\]/g,mn(c.assignee)||'[Your Name]');
+  }
+  document.getElementById('gm-subject').value=subject;
+  document.getElementById('gm-body').value=body;
+}
+
+function sendGmail(){
+  if(!gmailAccessToken){
+    gmailSignIn();
+    return;
+  }
+  const to=document.getElementById('gm-to').value.trim();
+  const cc=document.getElementById('gm-cc').value.trim();
+  const subject=document.getElementById('gm-subject').value.trim();
+  const body=document.getElementById('gm-body').value.trim();
+  if(!to){alert('To address is required.');return;}
+  if(!subject){alert('Subject is required.');return;}
+  if(!body){alert('Email body is required.');return;}
+
+  const statusEl=document.getElementById('gm-send-status');
+  statusEl.style.display='block';
+  statusEl.style.color='var(--text2)';
+  statusEl.textContent='Sending...';
+
+  // Build RFC 2822 email
+  let email=`From: ${gmailUserEmail}\r\nTo: ${to}\r\n`;
+  if(cc)email+=`Cc: ${cc}\r\n`;
+  email+=`Subject: ${subject}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${body}`;
+
+  // Base64url encode
+  const encodedEmail=btoa(unescape(encodeURIComponent(email))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+
+  fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+gmailAccessToken,'Content-Type':'application/json'},
+    body:JSON.stringify({raw:encodedEmail})
+  }).then(r=>{
+    if(r.ok){
+      statusEl.style.color='var(--gn)';
+      statusEl.textContent='✅ Email sent successfully!';
+      // Log the communication on the contact
+      if(gmailComposeContactId){
+        const c=S.contacts.find(x=>x.id==gmailComposeContactId);
+        if(c){
+          if(!c.comms)c.comms=[];
+          c.comms.unshift({type:'Email',outcome:'Sent',date:today(),notes:'Subject: '+subject,user:au(),id:S.nextId++,gmailSent:true});
+          c.lastActivity=today();
+          if(!c.log)c.log=[];
+          c.log.push({msg:'Email sent: '+subject,ts:ts(),user:au()});
+          logA('Email sent to '+c.name,gmailComposeContactId);
+          auditL('Email sent',c.name+' — '+subject);
+          saveState();
+        }
+      }
+      setTimeout(()=>closeModal('gmail-modal'),2000);
+    }else{
+      r.json().then(err=>{
+        statusEl.style.color='var(--rd)';
+        if(err.error&&err.error.status==='UNAUTHENTICATED'){
+          statusEl.textContent='Session expired. Please reconnect Gmail.';
+          gmailAccessToken=null;
+          updateGmailStatus(false);
+          sessionStorage.removeItem('gmail_token');
+        }else{
+          statusEl.textContent='❌ Send failed: '+(err.error?.message||'Unknown error');
+        }
+      });
+    }
+  }).catch(e=>{
+    statusEl.style.color='var(--rd)';
+    statusEl.textContent='❌ Network error: '+e.message;
+  });
+}
+
 // ── CLOSE MODALS ──
 document.querySelectorAll('.modal-overlay').forEach(ov=>{ov.addEventListener('click',e=>{if(e.target===ov){ov.classList.remove('open');if(ov.id==='import-modal')resetImp();}});});
 
@@ -1094,6 +1305,8 @@ sbLoad().then(loaded=>{
   setInterval(checkNotif,15*60*1000);
   // Poll for team changes every 10 seconds
   setInterval(syncFromServer,10000);
+  // Init Gmail after Google script loads
+  setTimeout(initGmail,1000);
 });
 
 function showSyncStatus(msg){
