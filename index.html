@@ -48,7 +48,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .stat-bar{position:absolute;bottom:0;left:0;height:3px;background:#E8401C;}
 .tag{font-size:11px;padding:2px 7px;border-radius:99px;font-weight:500;display:inline-block;}
 .tl{background:var(--orlt);color:var(--ordk);}.tr{background:#E1F5EE;color:#085041;}.tn{background:var(--bllt);color:var(--bl);}.tc{background:var(--amlt);color:var(--am);}
-.ts-contact{background:#F1EFE8;color:#444;}.ts-disc{background:var(--pult);color:var(--pu);}.ts-strat{background:var(--orlt);color:var(--ordk);}.ts-prop{background:var(--gnlt);color:var(--gn);}.ts-won{background:var(--gnlt);color:var(--gn);}.ts-lost{background:var(--rdlt);color:var(--rd);}
+.ts-contact{background:#F1EFE8;color:#444;}.ts-disc{background:var(--pult);color:var(--pu);}.ts-strat{background:var(--orlt);color:var(--ordk);}.ts-prop{background:var(--gnlt);color:var(--gn);}.ts-planning{background:#E8F4FD;color:#0a5275;}.ts-contract{background:#F0F9E8;color:#2d6a0a;}.ts-won{background:var(--gnlt);color:var(--gn);}.ts-lost{background:var(--rdlt);color:var(--rd);}
 .c-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(265px,1fr));gap:11px;}
 .c-card{background:#fff;border:1px solid var(--border);border-radius:var(--rlg);padding:13px;cursor:pointer;transition:border-color .15s,box-shadow .15s;position:relative;}
 .c-card:hover{border-color:#E8401C;box-shadow:0 2px 10px rgba(232,64,28,.09);}
@@ -61,7 +61,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .pipe-wrap{display:flex;gap:11px;overflow-x:auto;padding-bottom:10px;}
 .pipe-col{min-width:190px;flex:1;}
 .pipe-hdr{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:9px;padding-bottom:7px;border-bottom:3px solid var(--border);display:flex;justify-content:space-between;}
-.sc{border-color:#B4B2A9;}.sd{border-color:#AFA9EC;}.ss{border-color:#E8401C;}.sp{border-color:#5DCAA5;}
+.sc{border-color:#B4B2A9;}.sd{border-color:#AFA9EC;}.ss{border-color:#E8401C;}.sp{border-color:#5DCAA5;}.spl{border-color:#0a5275;}.sct{border-color:#2d6a0a;}
 .pipe-item{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:7px;cursor:pointer;}
 .pipe-item:hover{border-color:#E8401C;}
 .task-row{display:flex;align-items:flex-start;gap:9px;padding:11px 0;border-bottom:1px solid var(--border);}
@@ -187,7 +187,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   <div class="toolbar">
     <input type="text" id="cs" placeholder="Search name, LLC, email, phone..." oninput="renderContacts()">
     <select id="cdf" onchange="renderContacts()"><option value="">All divisions</option><option>Land Development</option><option>Residential Investment Renovations</option><option>Residential Investment New Construction</option><option>Custom Homes</option></select>
-    <select id="csf" onchange="renderContacts()"><option value="">All stages</option><option>Contact</option><option>Discovery Meeting</option><option>Strategy Meeting</option><option>Proposal</option><option>Won</option><option>Lost</option></select>
+    <select id="csf" onchange="renderContacts()"><option value="">All stages</option><option>Contact</option><option>Discovery Meeting</option><option>Strategy Meeting</option><option>Proposal</option><option>Planning</option><option>Contract</option><option>Won</option><option>Lost</option></select>
     <select id="caf" onchange="renderContacts()"><option value="">All assignees</option></select>
     <button class="btn btn-primary" onclick="openContactModal()">+ Add</button>
     <button class="btn btn-success" onclick="openImportModal()">⬆ Import</button>
@@ -196,7 +196,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   <div id="bulk-bar" class="bulk-bar">
     <span id="bulk-count">0 selected</span>
     <select id="bulk-div" class="bulk-bar select"><option value="">Assign division...</option><option>Land Development</option><option>Residential Investment Renovations</option><option>Residential Investment New Construction</option><option>Custom Homes</option></select>
-    <select id="bulk-stage"><option value="">Move stage...</option><option>Contact</option><option>Discovery Meeting</option><option>Strategy Meeting</option><option>Proposal</option><option>Won</option><option>Lost</option></select>
+    <select id="bulk-stage"><option value="">Move stage...</option><option>Contact</option><option>Discovery Meeting</option><option>Strategy Meeting</option><option>Proposal</option><option>Planning</option><option>Contract</option><option>Won</option><option>Lost</option></select>
     <select id="bulk-assign"><option value="">Assign to...</option></select>
     <button class="btn btn-sm btn-primary" onclick="applyBulk()">Apply</button>
     <button class="btn btn-sm" style="background:#555;color:#fff;border-color:#555;" onclick="clearSel()">✕ Clear</button>
@@ -228,7 +228,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div id="v-deals" class="view">
   <div class="toolbar">
     <input type="text" id="deal-s" placeholder="Search deals..." oninput="renderDeals()">
-    <select id="deal-sf" onchange="renderDeals()"><option value="">All stages</option><option>Contact</option><option>Discovery Meeting</option><option>Strategy Meeting</option><option>Proposal</option><option>Won</option><option>Lost</option></select>
+    <select id="deal-sf" onchange="renderDeals()"><option value="">All stages</option><option>Contact</option><option>Discovery Meeting</option><option>Strategy Meeting</option><option>Proposal</option><option>Planning</option><option>Contract</option><option>Won</option><option>Lost</option></select>
     <select id="deal-df" onchange="renderDeals()"><option value="">All divisions</option><option>Land Development</option><option>Residential Investment Renovations</option><option>Residential Investment New Construction</option><option>Custom Homes</option></select>
     <button class="btn btn-primary" onclick="openDealModal(null)">+ Add deal</button>
   </div>
@@ -321,7 +321,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <label><input type="checkbox" value="Custom Homes" class="div-cb" onchange="renderCF()"> Custom Homes</label>
   </div></div>
   <div id="cf-inputs"></div>
-  <div class="g2"><div class="fg"><label>Stage</label><select id="cm-stage"><option>Contact</option><option>Discovery Meeting</option><option>Strategy Meeting</option><option>Proposal</option><option>Won</option><option>Lost</option></select></div><div class="fg"><label>Proposal status</label><select id="cm-prop"><option value="">N/A</option><option>Sent</option><option>Under Review</option><option>Negotiating</option><option>Accepted</option><option>Declined</option></select></div></div>
+  <div class="g2"><div class="fg"><label>Stage</label><select id="cm-stage"><option>Contact</option><option>Discovery Meeting</option><option>Strategy Meeting</option><option>Proposal</option><option>Planning</option><option>Contract</option><option>Won</option><option>Lost</option></select></div><div class="fg"><label>Proposal status</label><select id="cm-prop"><option value="">N/A</option><option>Sent</option><option>Under Review</option><option>Negotiating</option><option>Accepted</option><option>Declined</option></select></div></div>
   <div class="fg"><label>Deal value ($)</label><input id="cm-value" type="number"></div>
   <div class="fg"><label>Notes</label><textarea id="cm-notes"></textarea></div>
   <div class="m-actions"><button class="btn" onclick="closeModal('contact-modal')">Cancel</button><button class="btn btn-primary" onclick="saveContact()">Save</button></div>
@@ -344,7 +344,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   <h2 id="dm-title">Add deal</h2>
   <div class="fg"><label>Deal name *</label><input id="dm-name" type="text" placeholder="e.g. Oak Creek Lot Purchase"></div>
   <div class="fg"><label>Contact / LLC</label><select id="dm-contact"><option value="">None</option></select></div>
-  <div class="g2"><div class="fg"><label>Division</label><select id="dm-div"><option value="">Select...</option><option>Land Development</option><option>Residential Investment Renovations</option><option>Residential Investment New Construction</option><option>Custom Homes</option></select></div><div class="fg"><label>Stage</label><select id="dm-stage"><option>Contact</option><option>Discovery Meeting</option><option>Strategy Meeting</option><option>Proposal</option><option>Won</option><option>Lost</option></select></div></div>
+  <div class="g2"><div class="fg"><label>Division</label><select id="dm-div"><option value="">Select...</option><option>Land Development</option><option>Residential Investment Renovations</option><option>Residential Investment New Construction</option><option>Custom Homes</option></select></div><div class="fg"><label>Stage</label><select id="dm-stage"><option>Contact</option><option>Discovery Meeting</option><option>Strategy Meeting</option><option>Proposal</option><option>Planning</option><option>Contract</option><option>Won</option><option>Lost</option></select></div></div>
   <div class="g2"><div class="fg"><label>Deal value ($)</label><input id="dm-value" type="number"></div><div class="fg"><label>Proposal status</label><select id="dm-prop"><option value="">N/A</option><option>Sent</option><option>Under Review</option><option>Negotiating</option><option>Accepted</option><option>Declined</option></select></div></div>
   <div class="fg"><label>Assigned to</label><select id="dm-assign"></select></div>
   <div class="fg"><label>Notes</label><textarea id="dm-notes"></textarea></div>
@@ -457,13 +457,13 @@ let S={contacts:[],tasks:[],deals:[],activity:[],auditLog:[],nextId:1,team:['Tea
 const DS={'Land Development':'Land Dev','Residential Investment Renovations':'RI Reno','Residential Investment New Construction':'RI New Const','Custom Homes':'Custom Homes'};
 const DC={'Land Development':'tl','Residential Investment Renovations':'tr','Residential Investment New Construction':'tn','Custom Homes':'tc'};
 const DA={'Land Development':'av-l','Residential Investment Renovations':'av-r','Residential Investment New Construction':'av-n','Custom Homes':'av-c'};
-const SC={'Contact':'ts-contact','Discovery Meeting':'ts-disc','Strategy Meeting':'ts-strat','Proposal':'ts-prop','Won':'ts-won','Lost':'ts-lost'};
-const STAGES=['Contact','Discovery Meeting','Strategy Meeting','Proposal'];
-const SPROB={Contact:10,'Discovery Meeting':25,'Strategy Meeting':50,Proposal:75,Won:100,Lost:0};
+const SC={'Contact':'ts-contact','Discovery Meeting':'ts-disc','Strategy Meeting':'ts-strat','Proposal':'ts-prop','Planning':'ts-planning','Contract':'ts-contract','Won':'ts-won','Lost':'ts-lost'};
+const STAGES=['Contact','Discovery Meeting','Strategy Meeting','Proposal','Planning','Contract'];
+const SPROB={Contact:10,'Discovery Meeting':25,'Strategy Meeting':50,Proposal:75,Planning:85,Contract:95,Won:100,Lost:0};
 const RDAYS={daily:1,weekly:7,biweekly:14,monthly:30,quarterly:90};
 const CF={'Land Development':['Lot size (acres)','Entitlement status','Zoning','Location/County'],'Residential Investment Renovations':['ARV ($)','Rehab budget ($)','Purchase price ($)','Property address'],'Residential Investment New Construction':['Lot address','Build budget ($)','Target sell price ($)','Sq footage'],'Custom Homes':['Family name','Lot address','Home size (sq ft)','Spec level','Budget ($)','Desired completion']};
 const PF={'Land Development':['Acreage','Zoning / entitlement','Infrastructure status','Projected timeline'],'Residential Investment Renovations':['Property address','ARV estimate','Rehab scope','Projected ROI'],'Residential Investment New Construction':['Lot address','Build spec level','Sq footage','Projected sell price'],'Custom Homes':['Lot address','Home size','Spec level','Estimated completion']};
-const SEQ={Contact:[{day:0,title:'Send intro email',type:'Email',notes:'Use Email Drip Stage 1'},{day:1,title:'Connect on LinkedIn',type:'Other',notes:'Find and connect'},{day:3,title:'Follow-up call',type:'Call',notes:'Discuss projects and goals'},{day:7,title:'Send market update',type:'Email',notes:'Share relevant insight'}],'Discovery Meeting':[{day:0,title:'Send meeting confirmation',type:'Email',notes:'Confirm date, time, agenda'},{day:0,title:'Prepare discovery agenda',type:'Other',notes:'Review background and goals'},{day:1,title:'Send post-discovery recap',type:'Email',notes:'Use Email Drip Stage 2'},{day:3,title:'Follow-up call',type:'Call',notes:'Confirm interest, schedule strategy'},{day:7,title:'Check-in if no response',type:'Email',notes:'Light touch'}],'Strategy Meeting':[{day:0,title:'Send meeting confirmation',type:'Email',notes:'Confirm and attach materials'},{day:0,title:'Prepare strategy presentation',type:'Other',notes:'Tailor to their goals'},{day:1,title:'Send post-strategy recap',type:'Email',notes:'Use Email Drip Stage 3'},{day:3,title:'Call on proposal timeline',type:'Call',notes:'Set delivery expectations'},{day:7,title:'Follow-up if no response',type:'Email',notes:'Reinforce value'}],Proposal:[{day:0,title:'Deliver proposal',type:'Email',notes:'Use Email Drip Stage 4'},{day:1,title:'Confirm proposal received',type:'Call',notes:'Walk through highlights'},{day:3,title:'Follow-up on questions',type:'Call',notes:'Address objections'},{day:7,title:'Final follow-up — decision',type:'Call',notes:'Ask for the business'},{day:14,title:'Last touch if no decision',type:'Email',notes:'Low-pressure check-in'}]};
+const SEQ={Contact:[{day:0,title:'Send intro email',type:'Email',notes:'Use Email Drip Stage 1'},{day:1,title:'Connect on LinkedIn',type:'Other',notes:'Find and connect'},{day:3,title:'Follow-up call',type:'Call',notes:'Discuss projects and goals'}],'Discovery Meeting':[{day:0,title:'Send meeting confirmation',type:'Email',notes:'Confirm date, time, agenda'},{day:0,title:'Prepare discovery agenda',type:'Other',notes:'Review background and goals'},{day:1,title:'Send post-discovery recap',type:'Email',notes:'Use Email Drip Stage 2'},{day:3,title:'Follow-up call',type:'Call',notes:'Confirm interest, schedule strategy'},{day:7,title:'Check-in if no response',type:'Email',notes:'Light touch'}],'Strategy Meeting':[{day:0,title:'Send meeting confirmation',type:'Email',notes:'Confirm and attach materials'},{day:0,title:'Prepare strategy presentation',type:'Other',notes:'Tailor to their goals'},{day:1,title:'Send post-strategy recap',type:'Email',notes:'Use Email Drip Stage 3'},{day:3,title:'Call on proposal timeline',type:'Call',notes:'Set delivery expectations'},{day:7,title:'Follow-up if no response',type:'Email',notes:'Reinforce value'}],Proposal:[{day:0,title:'Deliver proposal',type:'Email',notes:'Use Email Drip Stage 4'},{day:1,title:'Confirm proposal received',type:'Call',notes:'Walk through highlights'},{day:3,title:'Follow-up on questions',type:'Call',notes:'Address objections'},{day:7,title:'Final follow-up — decision',type:'Call',notes:'Ask for the business'},{day:14,title:'Last touch if no decision',type:'Email',notes:'Low-pressure check-in'}],Planning:[{day:0,title:'Send planning kickoff confirmation',type:'Email',notes:'Confirm signed proposal received, outline planning process'},{day:0,title:'Schedule kickoff meeting',type:'Meeting',notes:'Set up initial planning meeting with client'},{day:2,title:'Send project timeline draft',type:'Email',notes:'Share preliminary project schedule'},{day:7,title:'Planning check-in call',type:'Call',notes:'Review progress, address any questions'},{day:14,title:'Finalize project plan',type:'Other',notes:'Complete all planning documents before contract stage'},{day:21,title:'Send contract for review',type:'Email',notes:'Deliver contract draft to client'}],Contract:[{day:0,title:'Send contract',type:'Email',notes:'Deliver final contract for signature'},{day:1,title:'Confirm contract received',type:'Call',notes:'Ensure client has contract and understands terms'},{day:3,title:'Follow up on contract questions',type:'Call',notes:'Address any questions or requested changes'},{day:7,title:'Contract signature follow-up',type:'Call',notes:'Check on signing status, offer to assist'},{day:14,title:'Final contract push',type:'Call',notes:'Urgently follow up if contract not yet signed'}]};
 const DRIP=[{stage:'Contact',subject:'Introduction — Benchmark Construction & Development',body:`Hi [First Name],\n\nMy name is [Your Name] with Benchmark Construction and Development. We specialize in Land Development, Residential Investment Renovations, New Construction, and Custom Homes.\n\nI'd love to learn more about your investment goals and explore whether we might be a fit.\n\nWould you have 20 minutes for a discovery call this week?\n\nBest,\n[Your Name]\nBenchmark Construction & Development\n[Phone] | [Email]`},{stage:'Discovery Meeting',subject:'Great connecting — next steps',body:`Hi [First Name],\n\nGreat speaking with you today. Quick recap:\n\n- [Key point]\n- [Their goal]\n- [Any concerns]\n\nI'd like to schedule a strategy meeting — available [Day 1] or [Day 2]?\n\nBest,\n[Your Name]\nBenchmark Construction & Development`},{stage:'Strategy Meeting',subject:'Our proposed approach for [Project]',body:`Hi [First Name],\n\nThank you for your time today. Summary:\n\n- [Point 1]\n- [Point 2]\n- [Timeline]\n\nProposal by [Date].\n\nBest,\n[Your Name]\nBenchmark Construction & Development`},{stage:'Proposal',subject:'Benchmark Proposal — [Project Name]',body:`Hi [First Name],\n\nPlease find attached our proposal for [Project Name].\n\n- Scope: [Description]\n- Value: $[Amount]\n- Timeline: [Timeline]\n- Division: [Division]\n\nI'll follow up [Date] to walk through details.\n\nWe look forward to building something great together.\n\nBest,\n[Your Name]\nBenchmark Construction & Development\n[Phone] | [Email]`}];
 
 // ── SUPABASE CONFIG ──
@@ -756,7 +756,7 @@ function colCF(){const obj={};document.querySelectorAll('#cf-inputs input').forE
 // ── PIPELINE ──
 function renderPipeline(){
   const df=document.getElementById('pdf')?.value||'',af=document.getElementById('paf')?.value;
-  const scls={Contact:'sc','Discovery Meeting':'sd','Strategy Meeting':'ss',Proposal:'sp'};
+  const scls={Contact:'sc','Discovery Meeting':'sd','Strategy Meeting':'ss',Proposal:'sp',Planning:'spl',Contract:'sct'};
   document.getElementById('pipeline-board').innerHTML=STAGES.map(s=>{
     const items=S.contacts.filter(c=>c.stage===s&&(!df||(c.divisions&&c.divisions.includes(df)))&&(af===''||af==null||c.assignee==af));
     const tot=items.reduce((sum,c)=>sum+(Number(c.value)||0),0);
@@ -882,7 +882,108 @@ function saveGoals(){
   saveState();renderGoals();renderDB();auditL('Goals updated','Revenue targets saved');alert('Goals saved!');
 }
 // ── SEQUENCES / DRIP ──
-function renderSeq(){document.getElementById('seq-list').innerHTML=Object.entries(SEQ).map(([stage,steps])=>`<div class="seq-card"><div style="display:flex;align-items:center;gap:10px;margin-bottom:11px;"><span class="tag ${SC[stage]}">${stage}</span><span style="font-size:13px;font-weight:600;">Follow-up playbook</span><span style="font-size:12px;color:var(--text2);">${steps.length} tasks on entry</span></div>${steps.map(s=>`<div class="seq-step"><span class="seq-day">Day ${s.day}</span><div><div style="font-weight:500;">${s.title}</div><div style="font-size:12px;color:var(--text2);margin-top:2px;">${s.type} · ${s.notes}</div></div></div>`).join('')}</div>`).join('');}
+// Load custom sequences from state if they exist, otherwise use defaults
+function getSeq(){return S.customSeq||SEQ;}
+function saveSeq(){S.customSeq=window._editSeq;saveState();renderSeq();showInApp('Playbooks saved','Your custom follow-up sequences have been saved.');}
+
+function renderSeq(){
+  const seq=getSeq();
+  document.getElementById('seq-list').innerHTML=Object.entries(seq).map(([stage,steps])=>`
+    <div class="seq-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:11px;flex-wrap:wrap;">
+        <span class="tag ${SC[stage]}">${stage}</span>
+        <span style="font-size:13px;font-weight:600;">Follow-up playbook</span>
+        <span style="font-size:12px;color:var(--text2);">${steps.length} tasks on stage entry</span>
+        <button class="btn btn-sm" style="margin-left:auto;" onclick="editPlaybook('${stage}')">✏ Edit</button>
+      </div>
+      ${steps.map(s=>`<div class="seq-step"><span class="seq-day">Day ${s.day}</span><div><div style="font-weight:500;">${s.title}</div><div style="font-size:12px;color:var(--text2);margin-top:2px;">${s.type} · ${s.notes}</div></div></div>`).join('')}
+    </div>`).join('');
+}
+
+function editPlaybook(stage){
+  const seq=getSeq();
+  const steps=JSON.parse(JSON.stringify(seq[stage]||[]));
+  window._editSeq=JSON.parse(JSON.stringify(seq));
+  window._editStage=stage;
+
+  const modal=document.createElement('div');
+  modal.className='modal-overlay open';
+  modal.id='playbook-edit-modal';
+  modal.innerHTML=`<div class="modal modal-lg">
+    <h2>✏ Edit playbook — <span class="tag ${SC[stage]}">${stage}</span></h2>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:14px;">Changes apply to new contacts entering this stage. Existing tasks are not affected.</p>
+    <div id="pb-steps-list"></div>
+    <button class="btn btn-sm btn-success" style="margin-top:10px;width:100%;" onclick="addPlaybookStep()">+ Add step</button>
+    <div class="m-actions" style="margin-top:16px;">
+      <button class="btn" onclick="document.getElementById('playbook-edit-modal').remove()">Cancel</button>
+      <button class="btn btn-danger btn-sm" onclick="resetPlaybook('${stage}')">Reset to default</button>
+      <button class="btn btn-primary" onclick="savePlaybookEdit()">Save playbook</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});
+  renderPlaybookSteps(steps);
+}
+
+function renderPlaybookSteps(steps){
+  window._editSteps=steps;
+  const el=document.getElementById('pb-steps-list');
+  if(!el)return;
+  el.innerHTML=steps.map((s,i)=>`
+    <div style="background:var(--bg2);border-radius:var(--r);padding:12px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start;">
+      <div style="flex:1;">
+        <div style="display:grid;grid-template-columns:60px 1fr 100px;gap:8px;margin-bottom:6px;">
+          <div><label style="font-size:11px;color:var(--text2);font-weight:500;">Day</label>
+            <input type="number" value="${s.day}" min="0" onchange="updateStep(${i},'day',this.value)" style="width:100%;padding:5px 7px;font-size:13px;border-radius:var(--r);border:1px solid var(--border2);"></div>
+          <div><label style="font-size:11px;color:var(--text2);font-weight:500;">Task title</label>
+            <input type="text" value="${s.title}" oninput="updateStep(${i},'title',this.value)" style="width:100%;padding:5px 7px;font-size:13px;border-radius:var(--r);border:1px solid var(--border2);"></div>
+          <div><label style="font-size:11px;color:var(--text2);font-weight:500;">Type</label>
+            <select onchange="updateStep(${i},'type',this.value)" style="width:100%;padding:5px 7px;font-size:13px;border-radius:var(--r);border:1px solid var(--border2);">
+              ${['Call','Email','Meeting','Follow-up','Other'].map(t=>`<option ${s.type===t?'selected':''}>${t}</option>`).join('')}
+            </select></div>
+        </div>
+        <div><label style="font-size:11px;color:var(--text2);font-weight:500;">Notes</label>
+          <input type="text" value="${s.notes||''}" oninput="updateStep(${i},'notes',this.value)" placeholder="Notes..." style="width:100%;padding:5px 7px;font-size:13px;border-radius:var(--r);border:1px solid var(--border2);"></div>
+      </div>
+      <button class="btn btn-sm btn-danger" onclick="removePlaybookStep(${i})" title="Remove step" style="flex-shrink:0;margin-top:18px;">×</button>
+    </div>`).join('');
+}
+
+function updateStep(i,field,value){
+  if(!window._editSteps)return;
+  window._editSteps[i][field]=field==='day'?parseInt(value)||0:value;
+}
+
+function addPlaybookStep(){
+  if(!window._editSteps)window._editSteps=[];
+  window._editSteps.push({day:0,title:'',type:'Call',notes:''});
+  renderPlaybookSteps(window._editSteps);
+}
+
+function removePlaybookStep(i){
+  if(!window._editSteps)return;
+  window._editSteps.splice(i,1);
+  renderPlaybookSteps(window._editSteps);
+}
+
+function savePlaybookEdit(){
+  if(!window._editSteps||!window._editStage)return;
+  if(!window._editSeq)window._editSeq=JSON.parse(JSON.stringify(SEQ));
+  window._editSeq[window._editStage]=window._editSteps.filter(s=>s.title.trim());
+  S.customSeq=window._editSeq;
+  saveState();
+  document.getElementById('playbook-edit-modal')?.remove();
+  renderSeq();
+  showInApp('Playbook saved','Changes to '+window._editStage+' playbook saved.');
+  auditL('Playbook edited',window._editStage);
+}
+
+function resetPlaybook(stage){
+  if(!confirm('Reset '+stage+' playbook to default?'))return;
+  if(!window._editSeq)window._editSeq=JSON.parse(JSON.stringify(SEQ));
+  window._editSeq[stage]=JSON.parse(JSON.stringify(SEQ[stage]));
+  renderPlaybookSteps(window._editSeq[stage]);
+}
 function renderDrip(){document.getElementById('drip-list').innerHTML=DRIP.map((d,i)=>`<div class="drip-card"><div style="font-size:13px;font-weight:600;margin-bottom:3px;">Stage ${i+1}: ${d.stage}</div><div style="font-size:12px;color:var(--text2);margin-bottom:10px;"><strong>Subject:</strong> ${d.subject}</div><div class="drip-body">${d.body}</div><button class="btn btn-sm" style="margin-top:9px;" onclick="cpDrip(${i})">Copy template</button></div>`).join('');}
 function cpDrip(i){navigator.clipboard.writeText('Subject: '+DRIP[i].subject+'\n\n'+DRIP[i].body).then(()=>alert('Copied!')).catch(()=>alert('Copy manually.'));}
 
@@ -1003,7 +1104,7 @@ function showContact(id){
           <div class="dr"><span>Last activity</span><span style="color:var(--text2);">${c.lastActivity||'—'} (${daysDiff(c.lastActivity)}d ago)</span></div>
         </div>
         ${cfHtml}
-        ${canEdit()?`<div class="detail-sec"><h4>Move stage</h4><div style="display:flex;gap:5px;flex-wrap:wrap;">${['Contact','Discovery Meeting','Strategy Meeting','Proposal','Won','Lost'].map(s=>`<button class="btn btn-sm ${c.stage===s?'btn-primary':''}" onclick="mvStage(${c.id},'${s}')">${s}</button>`).join('')}</div></div>`:''}
+        ${canEdit()?`<div class="detail-sec"><h4>Move stage</h4><div style="display:flex;gap:5px;flex-wrap:wrap;">${['Contact','Discovery Meeting','Strategy Meeting','Proposal','Planning','Contract','Won','Lost'].map(s=>`<button class="btn btn-sm ${c.stage===s?'btn-primary':''}" onclick="mvStage(${c.id},'${s}')">${s}</button>`).join('')}</div></div>`:''}
         <div class="detail-sec"><h4>Deals (${cD.length})</h4>
           ${cD.map(d=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;"><a href="#" onclick="showDeal(${d.id});return false;" style="color:#E8401C;text-decoration:none;">${d.name}</a><span class="tag ${SC[d.stage]}">${d.stage}</span><span style="font-weight:600;">${fmt(d.value)}</span></div>`).join('')||'<div style="font-size:13px;color:var(--text2);">No deals</div>'}
           ${canEdit()?`<button class="btn btn-sm" style="margin-top:8px;" onclick="openDealModal(${id})">+ Add deal</button>`:''}
@@ -1011,7 +1112,7 @@ function showContact(id){
       </div>
       <div>
         <div class="detail-sec"><h4>Tasks (${rT.length})</h4>
-          ${rT.map(t=>`<div style="display:flex;align-items:center;gap:7px;padding:5px 0;font-size:13px;border-bottom:1px solid var(--border);">${canEdit()?`<div class="tcb ${t.done?'done':''}" onclick="togTask(${t.id});showContact(${id});">${t.done?'✓':''}</div>`:''}<span style="flex:1;${t.done?'text-decoration:line-through;color:var(--text2);':''}">${t.title}</span><span style="font-size:11px;color:var(--text2);">${mn(t.assignee)} · ${t.due||''}</span></div>`).join('')||'<div style="font-size:13px;color:var(--text2);">No tasks</div>'}
+          ${rT.map(t=>`<div style="display:flex;align-items:center;gap:7px;padding:5px 0;font-size:13px;border-bottom:1px solid var(--border);">${canEdit()?`<div class="tcb ${t.done?'done':''}" onclick="togTask(${t.id});showContact(${id});">${t.done?'✓':''}</div>`:''}<span style="flex:1;${t.done?'text-decoration:line-through;color:var(--text2);':''}">${t.title}</span><span style="font-size:11px;color:var(--text2);">${mn(t.assignee)} · ${t.due||''}</span>${canDel()?`<button class="btn btn-xs btn-danger" onclick="event.stopPropagation();delTask(${t.id});showContact(${id});" style="flex-shrink:0;margin-left:6px;">×</button>`:''}</div>`).join('')||'<div style="font-size:13px;color:var(--text2);">No tasks</div>'}
           ${canEdit()?`<button class="btn btn-sm" style="margin-top:8px;" onclick="openTaskModal(${id})">+ Add task</button>`:''}
         </div>
         <div class="detail-sec"><h4>Communications</h4>
@@ -1046,8 +1147,8 @@ function saveComm(){const cid=parseInt(document.getElementById('comm-cid').value
 function openTaskModal(cid){if(!canEdit()){alert('Read-only.');return;}rebuildSel();const sel=document.getElementById('tm-contact');sel.innerHTML='<option value="">None</option>'+S.contacts.map(c=>`<option value="${c.id}">${c.name}${c.llc?' / '+c.llc:''}</option>`).join('');if(cid)sel.value=cid;['tm-title','tm-due','tm-notes'].forEach(id=>setVal(id,''));setVal('tm-assign',au());setVal('tm-recur','');document.getElementById('task-modal').classList.add('open');}
 function saveTask(){const title=document.getElementById('tm-title').value.trim();if(!title)return alert('Title required.');const cid=document.getElementById('tm-contact').value||null,due=document.getElementById('tm-due').value||'',recur=document.getElementById('tm-recur').value||'';S.tasks.push({id:S.nextId++,title,contactId:cid,assignee:parseInt(document.getElementById('tm-assign').value),due,type:document.getElementById('tm-type').value,notes:document.getElementById('tm-notes').value.trim(),done:false,recur});const c=cid?S.contacts.find(x=>x.id==cid):null;logA(`Task: ${title}${c?' for '+c.name:''}`,cid);auditL('Task created',title);saveState();closeModal('task-modal');renderTasks();updateBadge();}
 function togTask(id){const t=S.tasks.find(x=>x.id==id);if(!t)return;t.done=!t.done;if(t.done&&t.recur&&RDAYS[t.recur]){const nd=addDays(t.due||today(),RDAYS[t.recur]);S.tasks.push({id:S.nextId++,title:t.title,contactId:t.contactId,assignee:t.assignee,due:nd,type:t.type,notes:t.notes,done:false,recur:t.recur,auto:true});showInApp('Recurring task scheduled',`"${t.title}" next due: ${nd}`);}const c=t.contactId?S.contacts.find(x=>x.id==t.contactId):null;if(c){c.lastActivity=today();if(!c.log)c.log=[];c.log.push({msg:`Task ${t.done?'✓':'reopened'}: ${t.title}`,ts:ts(),user:au()});}logA(`Task ${t.done?'✓':'reopened'}: ${t.title}`,t.contactId);saveState();renderTasks();updateBadge();}
-function delTask(id){if(!canDel()){alert('Admins only.');return;}if(!confirm('Delete?'))return;S.tasks=S.tasks.filter(t=>t.id!=id);saveState();renderTasks();updateBadge();}
-function genSeq(cid,stage,assignee){const steps=SEQ[stage];if(!steps)return;steps.forEach(s=>S.tasks.push({id:S.nextId++,title:s.title,contactId:cid,assignee:assignee??au(),due:addDays(today(),s.day),type:s.type,notes:s.notes,done:false,auto:true}));}
+function delTask(id){if(!canEdit()){alert('Read-only access.');return;}if(!confirm('Delete?'))return;S.tasks=S.tasks.filter(t=>t.id!=id);saveState();renderTasks();updateBadge();}
+function genSeq(cid,stage,assignee){const steps=(S.customSeq||SEQ)[stage];if(!steps)return;steps.forEach(s=>S.tasks.push({id:S.nextId++,title:s.title,contactId:cid,assignee:assignee??au(),due:addDays(today(),s.day),type:s.type,notes:s.notes,done:false,auto:true}));}
 
 // ── DEAL CRUD ──
 let pendDocs=[];
