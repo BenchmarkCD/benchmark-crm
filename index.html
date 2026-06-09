@@ -136,6 +136,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div class="hdr">
   <div><img src="https://benchmarkcd.github.io/benchmark-crm/logo.png" alt="Benchmark Construction & Development" style="height:36px;width:auto;display:block;"></div>
   <div class="hdr-r">
+    <div style="display:flex;align-items:center;background:#3a3a38;border-radius:99px;padding:3px;gap:2px;">
+      <button id="btn-my-view" onclick="setViewMode('my')" style="font-size:11px;padding:4px 12px;border-radius:99px;border:none;cursor:pointer;background:#E8401C;color:#fff;font-weight:600;transition:all .15s;">My view</button>
+      <button id="btn-co-view" onclick="setViewMode('company')" style="font-size:11px;padding:4px 12px;border-radius:99px;border:none;cursor:pointer;background:transparent;color:#aaa;font-weight:400;transition:all .15s;">Company</button>
+    </div>
     <div id="gmail-status" style="display:flex;align-items:center;gap:6px;cursor:pointer;" onclick="gmailSignIn()" title="Click to connect Gmail">
       <div id="gmail-dot" style="width:8px;height:8px;border-radius:50%;background:#888;flex-shrink:0;"></div>
       <span id="gmail-label" style="font-size:11px;color:#aaa;">Connect Gmail</span>
@@ -145,7 +149,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <span id="hdr-ov" style="display:none;" class="badge badge-red" onclick="showView('tasks',navBtn(3));setVal('tf','overdue');renderTasks();"></span>
     <span id="hdr-ag" style="display:none;" class="badge badge-am"></span>
     <span id="hdr-nb" style="display:none;" class="badge badge-bl" onclick="toggleNotif()"></span>
-    <select id="active-user" onchange="saveState();renderDB();renderFeed();"></select>
+    <select id="active-user" onchange="saveState();setViewMode('my');renderDB();renderFeed();"></select>
   </div>
 </div>
 <div class="nav" id="mnav">
@@ -457,6 +461,36 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div class="modal-overlay" id="deal-detail-modal"><div class="modal modal-lg" id="deal-detail-inner"></div></div>
 <script>
 const SK='bcd_v9';
+let viewMode='my'; // 'my' or 'company'
+
+function setViewMode(mode){
+  viewMode=mode;
+  // Update toggle button styles
+  const myBtn=document.getElementById('btn-my-view');
+  const coBtn=document.getElementById('btn-co-view');
+  if(myBtn&&coBtn){
+    if(mode==='my'){
+      myBtn.style.background='#E8401C';myBtn.style.color='#fff';myBtn.style.fontWeight='600';
+      coBtn.style.background='transparent';coBtn.style.color='#aaa';coBtn.style.fontWeight='400';
+    }else{
+      coBtn.style.background='#E8401C';coBtn.style.color='#fff';coBtn.style.fontWeight='600';
+      myBtn.style.background='transparent';myBtn.style.color='#aaa';myBtn.style.fontWeight='400';
+    }
+  }
+  // Re-render all active views
+  const active=document.querySelector('.view.active');
+  if(active){
+    const id=active.id.replace('v-','');
+    const renders={dashboard:()=>{renderDB();renderFeed();renderRadar();},contacts:renderContacts,pipeline:renderPipeline,tasks:renderTasks,deals:renderDeals,reports:renderReports,goals:renderGoals,team:renderTeam};
+    renders[id]?.();
+  }
+}
+
+// Helper: is this item visible in current view mode?
+function myFilter(assignee){
+  if(viewMode==='company')return true;
+  return assignee==au();
+}
 let S={contacts:[],tasks:[],deals:[],activity:[],auditLog:[],nextId:1,team:['Team Member 1','Team Member 2','Team Member 3','Team Member 4'],roles:{},agingDays:{Contact:14,'Discovery Meeting':10,'Strategy Meeting':10,Proposal:14},radarDays:{hot:30,warm:60},goals:{monthly:0,quarterly:0,annual:0,byMember:{},byDivision:{}}};
 const DS={'Land Development':'Land Dev','Residential Investment Renovations':'RI Reno','Residential Investment New Construction':'RI New Const','Custom Homes':'Custom Homes'};
 const DC={'Land Development':'tl','Residential Investment Renovations':'tr','Residential Investment New Construction':'tn','Custom Homes':'tc'};
@@ -658,33 +692,41 @@ function showTab(id,btn){
 }
 function renderDB(){
   const c=S.contacts,tod=today(),me=au();
-  const tv=c.reduce((s,x)=>s+(Number(x.value)||0),0);
-  const wt=c.filter(x=>!['Won','Lost'].includes(x.stage)).reduce((s,x)=>s+(Number(x.value)||0)*((SPROB[x.stage]||0)/100),0);
-  const ov=S.tasks.filter(t=>!t.done&&t.due&&t.due<tod).length;
-  const mine=S.tasks.filter(t=>!t.done&&t.assignee==me).length;
-  const wonV=c.filter(x=>x.stage==='Won').reduce((s,x)=>s+(Number(x.value)||0),0);
+  // Filter data based on view mode
+  const myC=viewMode==='my'?c.filter(x=>x.assignee==me):c;
+  const myT=viewMode==='my'?S.tasks.filter(t=>t.assignee==me):S.tasks;
+  const tv=myC.reduce((s,x)=>s+(Number(x.value)||0),0);
+  const wt=myC.filter(x=>!['Won','Lost'].includes(x.stage)).reduce((s,x)=>s+(Number(x.value)||0)*((SPROB[x.stage]||0)/100),0);
+  const ov=myT.filter(t=>!t.done&&t.due&&t.due<tod).length;
+  const mine=myT.filter(t=>!t.done&&t.assignee==me).length;
+  const wonV=myC.filter(x=>x.stage==='Won').reduce((s,x)=>s+(Number(x.value)||0),0);
   const gp=S.goals.monthly>0?Math.min(100,Math.round(wonV/S.goals.monthly*100)):0;
   document.getElementById('stats').innerHTML=`
-    <div class="stat-card"><div class="stat-lbl">Contacts</div><div class="stat-val">${c.length}</div><div class="stat-bar" style="width:100%"></div></div>
-    <div class="stat-card"><div class="stat-lbl">Active deals</div><div class="stat-val">${c.filter(x=>!['Won','Lost'].includes(x.stage)).length}</div></div>
+    <div class="stat-card" style="grid-column:1/-1;background:var(--bg3);padding:6px 12px;border-radius:var(--r);border:none;margin-bottom:2px;">
+      <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;">${viewMode==='my'?(mn(me)+"'s view"):'Company view'}</div>
+    </div>
+    <div class="stat-card"><div class="stat-lbl">Contacts</div><div class="stat-val">${myC.length}</div><div class="stat-bar" style="width:100%"></div></div>
+    <div class="stat-card"><div class="stat-lbl">Active deals</div><div class="stat-val">${myC.filter(x=>!['Won','Lost'].includes(x.stage)).length}</div></div>
     <div class="stat-card"><div class="stat-lbl">Pipeline</div><div class="stat-val" style="font-size:15px;">$${tv.toLocaleString()}</div></div>
     <div class="stat-card"><div class="stat-lbl">Weighted</div><div class="stat-val" style="font-size:14px;color:#E8401C;">$${Math.round(wt).toLocaleString()}</div></div>
-    <div class="stat-card"><div class="stat-lbl">Won</div><div class="stat-val" style="color:var(--gn);">${c.filter(x=>x.stage==='Won').length}</div></div>
-    <div class="stat-card"><div class="stat-lbl">Lost</div><div class="stat-val" style="color:var(--rd);">${c.filter(x=>x.stage==='Lost').length}</div></div>
+    <div class="stat-card"><div class="stat-lbl">Won</div><div class="stat-val" style="color:var(--gn);">${myC.filter(x=>x.stage==='Won').length}</div></div>
+    <div class="stat-card"><div class="stat-lbl">Lost</div><div class="stat-val" style="color:var(--rd);">${myC.filter(x=>x.stage==='Lost').length}</div></div>
     <div class="stat-card"><div class="stat-lbl">Overdue</div><div class="stat-val" style="color:#E8401C;">${ov}</div></div>
-    <div class="stat-card"><div class="stat-lbl">My tasks</div><div class="stat-val">${mine}</div></div>
-    ${S.goals.monthly>0?`<div class="stat-card"><div class="stat-lbl">Monthly goal</div><div class="stat-val">${gp}%</div><div class="stat-bar" style="width:${gp}%;background:${gp>=100?'var(--gn)':'#E8401C'}"></div></div>`:''}`;
+    <div class="stat-card"><div class="stat-lbl">${viewMode==='my'?'My open tasks':'All open tasks'}</div><div class="stat-val">${mine}</div></div>
+    ${S.goals.monthly>0?`<div class="stat-card"><div class="stat-lbl">Monthly goal</div><div class="stat-val">${gp}%</div><div class="stat-bar" style="width:${gp}%;background:${gp>=100?'var(--gn)':'#E8401C'}"></div></div>`:''}
+  `;
   const ag=getAging();
   document.getElementById('aging-alerts').innerHTML=ag.slice(0,3).map(a=>`<div class="alert-box">⏱ <strong>${a.name}</strong> in <strong>${a.stage}</strong> for ${a.days} days. <a href="#" onclick="showContact(${a.id});return false;" style="color:var(--ordk);margin-left:6px;">View →</a></div>`).join('');
   const divs=['Land Development','Residential Investment Renovations','Residential Investment New Construction','Custom Homes'];
-  document.getElementById('div-breakdown').innerHTML=divs.map(d=>{const dc=c.filter(x=>x.divisions&&x.divisions.includes(d));const dv=dc.reduce((s,x)=>s+(Number(x.value)||0),0);return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;"><span class="tag ${DC[d]}">${DS[d]}</span><span style="color:var(--text2);">${dc.length} · ${dv>0?'$'+dv.toLocaleString():'—'}</span></div>`;}).join('');
-  const myT=S.tasks.filter(t=>!t.done&&t.assignee==me&&t.due&&t.due<=addDays(tod,1)).sort((a,b)=>(a.due||'').localeCompare(b.due||'')).slice(0,6);
-  document.getElementById('dash-tasks').innerHTML=myT.length?myT.map(t=>{const lc=t.contactId?S.contacts.find(c=>c.id==t.contactId):null;const over=t.due<tod;return`<div style="padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;display:flex;justify-content:space-between;"><div><div style="${over?'color:var(--rd);font-weight:600;':''}">${t.title}</div><div style="font-size:11px;color:var(--text3);">${lc?lc.name+' · ':''} ${t.type||''}</div></div><span style="font-size:11px;font-weight:600;${over?'color:var(--rd);':'color:var(--text2);'}">${t.due}</span></div>`;}).join(''):'<div style="font-size:13px;color:var(--text2);padding:8px 0;">No tasks due today 🎉</div>';
+  document.getElementById('div-breakdown').innerHTML=divs.map(d=>{const dc=myC.filter(x=>x.divisions&&x.divisions.includes(d));const dv=dc.reduce((s,x)=>s+(Number(x.value)||0),0);return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;"><span class="tag ${DC[d]}">${DS[d]}</span><span style="color:var(--text2);">${dc.length} · ${dv>0?'$'+dv.toLocaleString():'—'}</span></div>`;}).join('');
+  const myDashT=myT.filter(t=>!t.done&&t.assignee==me&&t.due&&t.due<=addDays(tod,1)).sort((a,b)=>(a.due||'').localeCompare(b.due||'')).slice(0,6);
+  document.getElementById('dash-tasks').innerHTML=myDashT.length?myDashT.map(t=>{const lc=t.contactId?S.contacts.find(c=>c.id==t.contactId):null;const over=t.due<tod;return`<div style="padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;display:flex;justify-content:space-between;"><div><div style="${over?'color:var(--rd);font-weight:600;':''}">${t.title}</div><div style="font-size:11px;color:var(--text3);">${lc?lc.name+' · ':''} ${t.type||''}</div></div><span style="font-size:11px;font-weight:600;${over?'color:var(--rd);':'color:var(--text2);'}">${t.due}</span></div>`;}).join(''):'<div style="font-size:13px;color:var(--text2);padding:8px 0;">No tasks due today 🎉</div>';
   updateBadge();
   renderCompanyOverview();
 }
 function renderCompanyOverview(){
   const el=document.getElementById('company-overview');if(!el)return;
+  // Company overview always shows full company data regardless of view mode
   const c=S.contacts;
   const wonV=c.filter(x=>x.stage==='Won').reduce((s,x)=>s+(Number(x.value)||0),0);
   const lostV=c.filter(x=>x.stage==='Lost').reduce((s,x)=>s+(Number(x.value)||0),0);
@@ -771,9 +813,11 @@ function renderFeed(){const el=document.getElementById('activity-feed');if(!el)r
 function renderRadar(){
   const el=document.getElementById('inactivity-radar');if(!el)return;
   const hot=S.radarDays?.hot||30,warm=S.radarDays?.warm||60;
-  const list=[...S.contacts].map(c=>({...c,idays:daysDiff(c.lastActivity||c.createdDate||today())})).filter(c=>c.idays>=hot&&!['Won','Lost'].includes(c.stage)).sort((a,b)=>b.idays-a.idays).slice(0,8);
+  const radarContacts=viewMode==='my'?S.contacts.filter(x=>x.assignee==au()):S.contacts;
+  const list=[...radarContacts].map(c=>({...c,idays:daysDiff(c.lastActivity||c.createdDate||today())})).filter(c=>c.idays>=hot&&!['Won','Lost'].includes(c.stage)).sort((a,b)=>b.idays-a.idays).slice(0,8);
   el.innerHTML=list.length?list.map(c=>{const cls=c.idays>=warm?'r-hot':'r-warm';return`<div class="radar-row"><div class="av ${avC(c.divisions)}" style="width:28px;height:28px;font-size:10px;">${ini(c.name)}</div><div style="flex:1;"><a href="#" onclick="showContact(${c.id});return false;" style="color:#E8401C;text-decoration:none;font-weight:500;">${c.name}</a><div style="font-size:11px;color:var(--text3);">${(c.divisions||[]).map(d=>DS[d]).join(', ')||'No division'}</div></div><span class="radar-days ${cls}">${c.idays}d</span></div>`;}).join(''):'<div style="font-size:13px;color:var(--text2);">No inactive contacts 🎉</div>';}
-function getAging(){return S.contacts.filter(c=>STAGES.includes(c.stage)).map(c=>({...c,days:daysDiff(c.lastActivity||c.stageDate||c.createdDate||today())})).filter(c=>c.days>=(S.agingDays[c.stage]||14)).sort((a,b)=>b.days-a.days);}
+function getAging(){const agingSource=viewMode==='my'?S.contacts.filter(x=>x.assignee==au()):S.contacts;
+  return agingSource.filter(c=>STAGES.includes(c.stage)).map(c=>({...c,days:daysDiff(c.lastActivity||c.stageDate||c.createdDate||today())})).filter(c=>c.days>=(S.agingDays[c.stage]||14)).sort((a,b)=>b.days-a.days);}
 function updateBadge(){
   const tod=today(),ov=S.tasks.filter(t=>!t.done&&t.due&&t.due<tod).length;
   const ob=document.getElementById('hdr-ov');if(ov>0){ob.style.display='inline';ob.textContent=ov+' overdue';}else ob.style.display='none';
@@ -786,7 +830,7 @@ let selC=new Set();
 function renderContacts(){
   const q=(document.getElementById('cs')||{}).value?.toLowerCase()||'';
   const df=document.getElementById('cdf')?.value||'',sf=document.getElementById('csf')?.value||'',af=document.getElementById('caf')?.value;
-  const list=S.contacts.filter(c=>(!q||[c.name,c.llc,c.email,c.phone].some(v=>v?.toLowerCase().includes(q)))&&(!df||(c.divisions&&c.divisions.includes(df)))&&(!sf||c.stage===sf)&&(af===''||af==null||c.assignee==af));
+  const list=S.contacts.filter(c=>(!q||[c.name,c.llc,c.email,c.phone].some(v=>v?.toLowerCase().includes(q)))&&(!df||(c.divisions&&c.divisions.includes(df)))&&(!sf||c.stage===sf)&&(af===''||af==null||c.assignee==af)&&myFilter(c.assignee));
   const grid=document.getElementById('contacts-grid');
   if(!list.length){grid.innerHTML='<div class="empty">No contacts found.</div>';return;}
   grid.innerHTML=list.map(c=>`<div class="c-card ${selC.has(c.id)?'selected':''}" onclick="handleCC(event,${c.id})">
@@ -832,7 +876,7 @@ function renderPipeline(){
   const df=document.getElementById('pdf')?.value||'',af=document.getElementById('paf')?.value;
   const scls={Contact:'sc','Discovery Meeting':'sd','Strategy Meeting':'ss',Proposal:'sp',Planning:'spl',Contract:'sct'};
   document.getElementById('pipeline-board').innerHTML=STAGES.map(s=>{
-    const items=S.contacts.filter(c=>c.stage===s&&(!df||(c.divisions&&c.divisions.includes(df)))&&(af===''||af==null||c.assignee==af));
+    const items=S.contacts.filter(c=>c.stage===s&&(!df||(c.divisions&&c.divisions.includes(df)))&&(af===''||af==null||c.assignee==af)&&myFilter(c.assignee));
     const tot=items.reduce((sum,c)=>sum+(Number(c.value)||0),0);
     return`<div class="pipe-col"><div class="pipe-hdr ${scls[s]}"><span>${s} (${items.length})</span><span class="prob-badge">${SPROB[s]}%</span></div>
       ${items.map(c=>`<div class="pipe-item" onclick="showContact(${c.id})"><div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;"><div class="av ${avC(c.divisions)}" style="width:24px;height:24px;font-size:9px;">${ini(c.name)}</div><div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.name}</div></div><div style="font-size:11px;color:var(--text2);">${(c.divisions||[]).map(d=>DS[d]).join(', ')}</div>${c.propStatus?`<span class="prob-badge" style="font-size:10px;margin-top:3px;display:inline-block;">${c.propStatus}</span>`:''}<div style="font-size:12px;color:var(--text2);margin-top:5px;">${fmt(c.value)}${mn(c.assignee)?' · '+mn(c.assignee):''}</div></div>`).join('')||'<div style="font-size:12px;color:var(--text2);padding:5px 0;">—</div>'}
@@ -845,6 +889,8 @@ function renderPipeline(){
 function renderTasks(){
   const fil=document.getElementById('tf')?.value||'',af=document.getElementById('taf')?.value,tod=today(),me=au();
   let list=[...S.tasks].sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999'));
+  // In My view, restrict to current user's tasks first
+  if(viewMode==='my')list=list.filter(t=>t.assignee==me);
   if(fil==='mine')list=list.filter(t=>!t.done&&t.assignee==me);
   else if(fil==='overdue')list=list.filter(t=>!t.done&&t.due&&t.due<tod);
   else if(fil==='today')list=list.filter(t=>!t.done&&t.due===tod);
@@ -872,7 +918,7 @@ function renderTasks(){
 // ── DEALS ──
 function renderDeals(){
   const q=document.getElementById('deal-s')?.value?.toLowerCase()||'',sf=document.getElementById('deal-sf')?.value||'',df=document.getElementById('deal-df')?.value||'';
-  const list=(S.deals||[]).filter(d=>(!q||d.name?.toLowerCase().includes(q)||d.contactName?.toLowerCase().includes(q))&&(!sf||d.stage===sf)&&(!df||d.division===df));
+  const list=(S.deals||[]).filter(d=>(!q||d.name?.toLowerCase().includes(q)||d.contactName?.toLowerCase().includes(q))&&(!sf||d.stage===sf)&&(!df||d.division===df)&&myFilter(d.assignee));
   const el=document.getElementById('deals-list');
   if(!list.length){el.innerHTML='<div class="empty">No deals yet. Use Deals to track multiple projects per LLC/contact independently.</div>';return;}
   el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:11px;">${list.map(d=>`<div class="card" style="cursor:pointer;" onclick="showDeal(${d.id})"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;"><div style="font-weight:600;font-size:14px;">${d.name}</div><span class="tag ${SC[d.stage]}">${d.stage}</span></div>${d.contactName?`<div style="font-size:12px;color:var(--text2);margin-bottom:5px;">👤 ${d.contactName}</div>`:''} ${d.division?`<span class="tag ${DC[d.division]||''}">${DS[d.division]||d.division}</span>`:''} ${d.propStatus?`<span class="prob-badge" style="margin-left:4px;">${d.propStatus}</span>`:''}<div style="display:flex;justify-content:space-between;margin-top:8px;font-size:13px;"><span style="font-weight:600;">${fmt(d.value)}</span><span style="color:var(--text2);">${mn(d.assignee)}</span></div>${(d.docs||[]).length?`<div style="font-size:12px;color:var(--bl);margin-top:5px;">📎 ${d.docs.length} doc${d.docs.length>1?'s':''}</div>`:''}</div>`).join('')}</div>`;
@@ -887,7 +933,8 @@ function renderReports(){
 function rbar(lbl,pct,val,cls=''){return`<div class="rbar-row"><span class="rbar-lbl ${cls}">${lbl}</span><div class="rbar-track"><div class="rbar-fill" style="width:${Math.min(100,pct)}%"></div></div><span class="rbar-val">${val}</span></div>`;}
 function renderWL(){
   const el=document.getElementById('rep-wl');if(!el)return;
-  const won=S.contacts.filter(c=>c.stage==='Won'),lost=S.contacts.filter(c=>c.stage==='Lost');
+  const rptC=viewMode==='my'?S.contacts.filter(x=>x.assignee==au()):S.contacts;
+  const won=rptC.filter(c=>c.stage==='Won'),lost=rptC.filter(c=>c.stage==='Lost');
   const wv=won.reduce((s,c)=>s+(Number(c.value)||0),0),lv=lost.reduce((s,c)=>s+(Number(c.value)||0),0);
   const wr=won.length+lost.length>0?Math.round(won.length/(won.length+lost.length)*100):0;
   const divs=['Land Development','Residential Investment Renovations','Residential Investment New Construction','Custom Homes'];
@@ -897,20 +944,22 @@ function renderWL(){
 }
 function renderFC(){
   const el=document.getElementById('rep-fc');if(!el)return;
-  const active=S.contacts.filter(c=>!['Won','Lost'].includes(c.stage));
+  const fcC=viewMode==='my'?S.contacts.filter(x=>x.assignee==au()):S.contacts;
+  const active=fcC.filter(c=>!['Won','Lost'].includes(c.stage));
   const tp=active.reduce((s,c)=>s+(Number(c.value)||0),0),wt=active.reduce((s,c)=>s+(Number(c.value)||0)*((SPROB[c.stage]||0)/100),0);
   el.innerHTML=`<div class="g2"><div class="card"><h3 style="font-size:13px;font-weight:600;margin-bottom:12px;">Revenue forecast</h3><div style="display:flex;flex-direction:column;gap:6px;"><div style="display:flex;justify-content:space-between;font-size:13px;"><span>Total pipeline</span><span style="font-weight:700;">$${tp.toLocaleString()}</span></div><div style="display:flex;justify-content:space-between;font-size:13px;"><span>Weighted forecast</span><span style="font-weight:700;color:#E8401C;">$${Math.round(wt).toLocaleString()}</span></div>${S.goals.monthly>0?`<div style="display:flex;justify-content:space-between;font-size:13px;"><span>Monthly goal</span><span style="font-weight:700;">$${Number(S.goals.monthly).toLocaleString()}</span></div>`:''}</div><div style="font-size:11px;color:var(--text2);margin-top:8px;">Contact 10% · Discovery 25% · Strategy 50% · Proposal 75%</div></div>
   <div class="card"><h3 style="font-size:13px;font-weight:600;margin-bottom:12px;">By stage</h3>${STAGES.map(s=>{const sv=active.filter(c=>c.stage===s).reduce((sum,c)=>sum+(Number(c.value)||0),0);return rbar(`<span class="tag ${SC[s]}">${s}</span>`,tp>0?sv/tp*100:0,'$'+Math.round(sv*(SPROB[s]/100)).toLocaleString());}).join('')}</div></div>`;
 }
 function renderPL(){
   const el=document.getElementById('rep-pl');if(!el)return;
-  el.innerHTML=`<div class="g2"><div class="card"><h3 style="font-size:13px;font-weight:600;margin-bottom:12px;">Contacts by stage</h3>${['Contact','Discovery Meeting','Strategy Meeting','Proposal','Won','Lost'].map(s=>{const n=S.contacts.filter(c=>c.stage===s).length;return rbar(`<span class="tag ${SC[s]}">${s}</span>`,n*10,`${n}`);}).join('')}</div>
-  <div class="card"><h3 style="font-size:13px;font-weight:600;margin-bottom:12px;">Aging contacts</h3>${getAging().slice(0,8).map(a=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;"><a href="#" onclick="showContact(${a.id});return false;" style="color:#E8401C;text-decoration:none;">${a.name}</a><span style="color:var(--rd);font-size:12px;">${a.days}d in ${a.stage}</span></div>`).join('')||'<div style="font-size:13px;color:var(--text2);">No aging contacts 🎉</div>'}</div></div>`;
+  el.innerHTML=`<div class="g2"><div class="card"><h3 style="font-size:13px;font-weight:600;margin-bottom:12px;">Contacts by stage</h3>${['Contact','Discovery Meeting','Strategy Meeting','Proposal','Won','Lost'].map(s=>{const n=(viewMode==='my'?S.contacts.filter(x=>x.assignee==au()):S.contacts).filter(c=>c.stage===s).length;return rbar(`<span class="tag ${SC[s]}">${s}</span>`,n*10,`${n}`);}).join('')}</div>
+  <div class="card"><h3 style="font-size:13px;font-weight:600;margin-bottom:12px;">Aging contacts</h3>${(viewMode==='my'?S.contacts.filter(x=>x.assignee==au()):S.contacts).filter(c=>STAGES.includes(c.stage)).map(c=>({...c,days:daysDiff(c.lastActivity||c.stageDate||c.createdDate||today())})).filter(c=>c.days>=(S.agingDays[c.stage]||14)).sort((a,b)=>b.days-a.days).slice(0,8).map(a=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;"><a href="#" onclick="showContact(${a.id});return false;" style="color:#E8401C;text-decoration:none;">${a.name}</a><span style="color:var(--rd);font-size:12px;">${a.days}d in ${a.stage}</span></div>`).join('')||'<div style="font-size:13px;color:var(--text2);">No aging contacts 🎉</div>'}</div></div>`;
 }
 function renderSrc(){
   const el=document.getElementById('rep-src');if(!el)return;
+  const srcC=viewMode==='my'?S.contacts.filter(x=>x.assignee==au()):S.contacts;
   const srcs=['Referral','Networking event','Repeat client','Other'];
-  el.innerHTML=`<div class="g2"><div class="card"><h3 style="font-size:13px;font-weight:600;margin-bottom:12px;">By source</h3>${srcs.map(s=>{const n=S.contacts.filter(c=>c.source===s).length,w=S.contacts.filter(c=>c.source===s&&c.stage==='Won').length;return rbar(s,n*15,`${n} (${w} won)`);}).join('')}</div>
+  el.innerHTML=`<div class="g2"><div class="card"><h3 style="font-size:13px;font-weight:600;margin-bottom:12px;">By source</h3>${srcs.map(s=>{const n=srcC.filter(c=>c.source===s).length,w=S.contacts.filter(c=>c.source===s&&c.stage==='Won').length;return rbar(s,n*15,`${n} (${w} won)`);}).join('')}</div>
   <div class="card"><h3 style="font-size:13px;font-weight:600;margin-bottom:12px;">Value by source</h3>${srcs.map(s=>{const v=S.contacts.filter(c=>c.source===s).reduce((s,c)=>s+(Number(c.value)||0),0);return rbar(s,v/50000,v>0?'$'+v.toLocaleString():'—');}).join('')}</div></div>`;
 }
 function renderRef(){
@@ -1238,7 +1287,7 @@ function expTaskICS(tid){const t=S.tasks.find(x=>x.id==tid);if(!t||!t.due){alert
 function expContactICS(id){const c=S.contacts.find(x=>x.id==id);if(!c)return;const rT=S.tasks.filter(t=>t.contactId==id&&t.due&&!t.done);if(!rT.length){alert('No upcoming tasks with due dates.');return;}const events=rT.map(t=>{const dt=t.due.replace(/-/g,'');return`BEGIN:VEVENT\nDTSTART;VALUE=DATE:${dt}\nDTEND;VALUE=DATE:${dt}\nSUMMARY:${t.title} — ${c.name}\nDESCRIPTION:${t.type||''}\nEND:VEVENT`;}).join('\n');const ics=`BEGIN:VCALENDAR\nVERSION:2.0\n${events}\nEND:VCALENDAR`;const a=document.createElement('a');a.href='data:text/calendar;charset=utf-8,'+encodeURIComponent(ics);a.download=`${c.name.replace(/\s/g,'_')}_tasks.ics`;a.click();}
 
 // ── EXPORT ──
-function exportFiltered(){const q=(document.getElementById('cs')||{}).value?.toLowerCase()||'',df=document.getElementById('cdf')?.value||'',sf=document.getElementById('csf')?.value||'',af=document.getElementById('caf')?.value;const list=S.contacts.filter(c=>(!q||[c.name,c.llc,c.email,c.phone].some(v=>v?.toLowerCase().includes(q)))&&(!df||(c.divisions&&c.divisions.includes(df)))&&(!sf||c.stage===sf)&&(af===''||af==null||c.assignee==af));const rows=[['Name','LLC','Phone','Email','Source','Referred By','Assigned To','Divisions','Stage','Proposal Status','Deal Value','Notes']];list.forEach(c=>rows.push([c.name||'',c.llc||'',c.phone||'',c.email||'',c.source||'',c.ref||'',mn(c.assignee),(c.divisions||[]).join('; '),c.stage||'',c.propStatus||'',c.value||'',(c.notes||[]).map(n=>n.text).join(' | ')]));const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=`Benchmark_CRM_${sf||df||'All'}_${today()}.csv`;a.click();}
+function exportFiltered(){const q=(document.getElementById('cs')||{}).value?.toLowerCase()||'',df=document.getElementById('cdf')?.value||'',sf=document.getElementById('csf')?.value||'',af=document.getElementById('caf')?.value;const list=S.contacts.filter(c=>(!q||[c.name,c.llc,c.email,c.phone].some(v=>v?.toLowerCase().includes(q)))&&(!df||(c.divisions&&c.divisions.includes(df)))&&(!sf||c.stage===sf)&&(af===''||af==null||c.assignee==af)&&myFilter(c.assignee));const rows=[['Name','LLC','Phone','Email','Source','Referred By','Assigned To','Divisions','Stage','Proposal Status','Deal Value','Notes']];list.forEach(c=>rows.push([c.name||'',c.llc||'',c.phone||'',c.email||'',c.source||'',c.ref||'',mn(c.assignee),(c.divisions||[]).join('; '),c.stage||'',c.propStatus||'',c.value||'',(c.notes||[]).map(n=>n.text).join(' | ')]));const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=`Benchmark_CRM_${sf||df||'All'}_${today()}.csv`;a.click();}
 function exportCSV(){setVal('csf','');setVal('cdf','');setVal('cs','');exportFiltered();}
 function exportJSON(){const a=document.createElement('a');a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(S,null,2));a.download=`Benchmark_CRM_Backup_${today()}.json`;a.click();}
 function resetData(){if(!canDel()){alert('Admins only.');return;}if(!confirm('Delete ALL data?'))return;if(!confirm('Cannot be undone. Continue?'))return;S={...S,contacts:[],tasks:[],deals:[],activity:[],auditLog:[],nextId:1};saveState();renderDB();renderContacts();renderTasks();renderDeals();}
