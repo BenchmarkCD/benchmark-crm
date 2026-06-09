@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact Benchmark Construction & Development</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#F5F5F3;color:#1a1a18;font-size:14px;min-height:100vh;padding:2rem 1rem;}
+.wrap{max-width:600px;margin:0 auto;}
+.header{text-align:center;margin-bottom:2rem;}
+.header img{height:52px;width:auto;margin-bottom:1rem;}
+.header h1{font-size:22px;font-weight:600;color:#1a1a18;margin-bottom:6px;}
+.header p{font-size:14px;color:#5F5E5A;line-height:1.6;}
+.card{background:#fff;border:1px solid #e0ddd6;border-radius:12px;padding:24px;}
+.section-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#888780;margin:20px 0 12px;padding-bottom:6px;border-bottom:1px solid #e0ddd6;}
+.section-title:first-child{margin-top:0;}
+.fg{margin-bottom:14px;}
+.fg label{display:block;font-size:12px;font-weight:500;color:#5F5E5A;margin-bottom:5px;}
+.fg label .req{color:#E8401C;}
+.fg input,.fg select,.fg textarea{width:100%;font-size:14px;padding:9px 11px;border-radius:8px;border:1px solid #ccc9c0;background:#fff;color:#1a1a18;transition:border-color .15s;}
+.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:#E8401C;box-shadow:0 0 0 3px rgba(232,64,28,.08);}
+.fg textarea{min-height:100px;resize:vertical;font-family:inherit;line-height:1.6;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.div-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.div-option{display:flex;align-items:center;gap:9px;padding:11px 13px;border:1px solid #ccc9c0;border-radius:8px;cursor:pointer;font-size:13px;color:#1a1a18;transition:border-color .15s,background .15s;user-select:none;}
+.div-option:hover{border-color:#E8401C;background:#FDF0ED;}
+.div-option input{width:16px;height:16px;accent-color:#E8401C;flex-shrink:0;}
+.div-option.checked{border-color:#E8401C;background:#FDF0ED;}
+.existing-check{display:flex;align-items:center;gap:9px;padding:11px 13px;border:1px solid #ccc9c0;border-radius:8px;cursor:pointer;font-size:13px;color:#1a1a18;}
+.existing-check input{width:16px;height:16px;accent-color:#E8401C;}
+.submit-btn{width:100%;background:#E8401C;color:#fff;border:none;border-radius:8px;padding:13px;font-size:15px;font-weight:600;cursor:pointer;margin-top:20px;transition:background .15s;}
+.submit-btn:hover{background:#B5300E;}
+.submit-btn:disabled{background:#ccc;cursor:not-allowed;}
+.privacy{text-align:center;font-size:12px;color:#888780;margin-top:12px;line-height:1.5;}
+.error-msg{color:#A32D2D;font-size:12px;margin-top:4px;display:none;}
+.field-error{border-color:#A32D2D !important;}
+/* Success screen */
+.success-screen{display:none;text-align:center;padding:40px 20px;}
+.success-icon{width:64px;height:64px;border-radius:50%;background:#EAF3DE;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:28px;}
+.success-screen h2{font-size:20px;font-weight:600;color:#1a1a18;margin-bottom:8px;}
+.success-screen p{font-size:14px;color:#5F5E5A;line-height:1.6;}
+/* Loading spinner */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+@media(max-width:480px){.g2,.div-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <img src="https://benchmarkcd.github.io/benchmark-crm/logo.png" alt="Benchmark Construction & Development">
+    <h1>Let's connect</h1>
+    <p>Fill out the form below and our team will reach out to you shortly.</p>
+  </div>
+
+  <div class="card">
+    <!-- Success screen (hidden until submit) -->
+    <div class="success-screen" id="success-screen">
+      <div class="success-icon">✓</div>
+      <h2>Thank you!</h2>
+      <p>We've received your information and our team will be in touch with you soon.<br><br>We look forward to working with you.</p>
+    </div>
+
+    <!-- Form -->
+    <form id="contact-form" onsubmit="submitForm(event)" novalidate>
+      <div class="section-title">Contact information</div>
+
+      <div class="g2">
+        <div class="fg">
+          <label>Full name <span class="req">*</span></label>
+          <input type="text" id="f-name" placeholder="First Last" autocomplete="name">
+          <div class="error-msg" id="err-name">Please enter your name.</div>
+        </div>
+        <div class="fg">
+          <label>LLC / Company name</label>
+          <input type="text" id="f-llc" placeholder="ABC Holdings LLC" autocomplete="organization">
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="fg">
+          <label>Phone number <span class="req">*</span></label>
+          <input type="tel" id="f-phone" placeholder="(919) 555-0100" autocomplete="tel">
+          <div class="error-msg" id="err-phone">Please enter your phone number.</div>
+        </div>
+        <div class="fg">
+          <label>Email address <span class="req">*</span></label>
+          <input type="email" id="f-email" placeholder="name@company.com" autocomplete="email">
+          <div class="error-msg" id="err-email">Please enter a valid email address.</div>
+        </div>
+      </div>
+
+      <div class="section-title">About your project</div>
+
+      <div class="fg">
+        <label>I'm interested in <span class="req">*</span></label>
+        <div class="div-grid">
+          <label class="div-option" id="div-ld">
+            <input type="checkbox" value="Land Development" onchange="toggleDivOption(this)"> Land Development
+          </label>
+          <label class="div-option" id="div-rr">
+            <input type="checkbox" value="Residential Investment Renovations" onchange="toggleDivOption(this)"> Residential Investment Renovations
+          </label>
+          <label class="div-option" id="div-rn">
+            <input type="checkbox" value="Residential Investment New Construction" onchange="toggleDivOption(this)"> Residential Investment New Construction
+          </label>
+          <label class="div-option" id="div-ch">
+            <input type="checkbox" value="Custom Home" onchange="toggleDivOption(this)"> Custom Home
+          </label>
+        </div>
+        <div class="error-msg" id="err-div">Please select at least one area of interest.</div>
+      </div>
+
+      <div class="g2">
+        <div class="fg">
+          <label>Project timeline</label>
+          <select id="f-timeline">
+            <option value="">Select a timeline...</option>
+            <option>Ready now</option>
+            <option>1–3 months</option>
+            <option>3–6 months</option>
+            <option>6–12 months</option>
+            <option>Just exploring</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>How did you hear about us?</label>
+          <select id="f-source">
+            <option value="">Select...</option>
+            <option>Referral</option>
+            <option>Networking event</option>
+            <option>Website</option>
+            <option>Google</option>
+            <option>Social media</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="fg">
+        <label>Tell us about your project or investment goals</label>
+        <textarea id="f-notes" placeholder="Share any details about what you're looking to build, buy, or develop..."></textarea>
+      </div>
+
+      <label class="existing-check">
+        <input type="checkbox" id="f-existing"> I am an existing Benchmark client
+      </label>
+
+      <button type="submit" class="submit-btn" id="submit-btn">Submit</button>
+      <p class="privacy">Your information is kept private and will only be used to contact you about your project.</p>
+    </form>
+  </div>
+</div>
+
+<script>
+const SB_URL='https://vgmaiwqvnzikyyiittct.supabase.co';
+const SB_KEY='sb_publishable_bcMWQF6-NADFB3_PYrYCrA_c-bUSxlL';
+
+function toggleDivOption(cb){
+  cb.closest('.div-option').classList.toggle('checked',cb.checked);
+}
+
+function validate(){
+  let valid=true;
+  const name=document.getElementById('f-name');
+  const phone=document.getElementById('f-phone');
+  const email=document.getElementById('f-email');
+  const divs=[...document.querySelectorAll('.div-option input:checked')];
+
+  // Reset errors
+  ['name','phone','email','div'].forEach(f=>{
+    const err=document.getElementById('err-'+f);
+    if(err)err.style.display='none';
+  });
+  ['f-name','f-phone','f-email'].forEach(id=>{
+    document.getElementById(id)?.classList.remove('field-error');
+  });
+
+  if(!name.value.trim()){
+    document.getElementById('err-name').style.display='block';
+    name.classList.add('field-error');
+    valid=false;
+  }
+  if(!phone.value.trim()){
+    document.getElementById('err-phone').style.display='block';
+    phone.classList.add('field-error');
+    valid=false;
+  }
+  const emailVal=email.value.trim();
+  if(!emailVal||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)){
+    document.getElementById('err-email').style.display='block';
+    email.classList.add('field-error');
+    valid=false;
+  }
+  if(divs.length===0){
+    document.getElementById('err-div').style.display='block';
+    valid=false;
+  }
+  return valid;
+}
+
+async function submitForm(e){
+  e.preventDefault();
+  if(!validate())return;
+
+  const btn=document.getElementById('submit-btn');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span>Submitting...';
+
+  const divisions=[...document.querySelectorAll('.div-option input:checked')].map(cb=>cb.value);
+  const source=document.getElementById('f-source').value;
+  const isExisting=document.getElementById('f-existing').checked;
+
+  const submission={
+    name:document.getElementById('f-name').value.trim(),
+    llc:document.getElementById('f-llc').value.trim(),
+    phone:document.getElementById('f-phone').value.trim(),
+    email:document.getElementById('f-email').value.trim(),
+    divisions,
+    timeline:document.getElementById('f-timeline').value,
+    source:source||'Website',
+    notes:document.getElementById('f-notes').value.trim(),
+    existingClient:isExisting,
+    submittedAt:new Date().toISOString(),
+    status:'new'
+  };
+
+  try{
+    // Save to form_submissions table
+    const res=await fetch(SB_URL+'/rest/v1/form_submissions',{
+      method:'POST',
+      headers:{
+        'apikey':SB_KEY,
+        'Authorization':'Bearer '+SB_KEY,
+        'Content-Type':'application/json',
+        'Prefer':'return=representation'
+      },
+      body:JSON.stringify({data:submission})
+    });
+
+    if(!res.ok){
+      const err=await res.text();
+      throw new Error('Server error: '+err);
+    }
+
+    // Show success screen
+    document.getElementById('contact-form').style.display='none';
+    document.getElementById('success-screen').style.display='block';
+
+  }catch(err){
+    console.error('Submit error:',err);
+    btn.disabled=false;
+    btn.innerHTML='Submit';
+    alert('There was a problem submitting your form. Please try again or call us directly.');
+  }
+}
+</script>
+</body>
+</html>
