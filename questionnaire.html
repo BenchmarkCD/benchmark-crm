@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Questionnaire — Benchmark Construction & Development</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#F5F5F3;color:#1a1a18;font-size:14px;min-height:100vh;padding:2rem 1rem;}
+.qw{max-width:620px;margin:0 auto;padding:.5rem 0 2rem;}
+.hdr{text-align:center;margin-bottom:16px;}
+.hdr img{height:48px;width:auto;display:block;margin:0 auto 10px;}
+.hdr h2{font-size:20px;font-weight:600;margin:0 0 5px;}
+.hdr p{font-size:13px;color:#5F5E5A;line-height:1.6;}
+.prog-wrap{margin-bottom:14px;}
+.prog-bar-track{height:4px;background:#e0ddd6;border-radius:2px;overflow:hidden;}
+.prog-bar-fill{height:100%;background:#E8401C;border-radius:2px;transition:width .4s;}
+.prog-labels{display:flex;justify-content:space-between;margin-top:6px;}
+.pl{font-size:11px;color:#888780;font-weight:500;}
+.pl.active{color:#E8401C;}
+.pl.done{color:#1a5c0a;}
+.card{background:#fff;border:1px solid #e0ddd6;border-radius:12px;padding:22px;margin-bottom:10px;}
+.st{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#888780;margin:16px 0 10px;padding-bottom:6px;border-bottom:1px solid #e0ddd6;}
+.st:first-child{margin-top:0;}
+.fg{margin-bottom:13px;}
+.fg label{display:block;font-size:12px;font-weight:500;color:#5F5E5A;margin-bottom:4px;}
+.hint{font-size:10px;color:#888780;}
+.req{color:#E8401C;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+select,input[type=text],input[type=email],input[type=tel],textarea{width:100%;font-size:13px;padding:9px 11px;border-radius:8px;border:1px solid #ccc9c0;background:#fff;color:#1a1a18;font-family:inherit;transition:border-color .15s;}
+select:focus,input:focus,textarea:focus{outline:none;border-color:#E8401C;box-shadow:0 0 0 3px rgba(232,64,28,.08);}
+textarea{resize:vertical;line-height:1.6;}
+.banner{border-radius:8px;padding:8px 13px;font-size:12px;font-weight:600;margin-bottom:14px;}
+.banner-ld{background:#FDF0ED;color:#B5300E;}
+.banner-rir{background:#E1F5EE;color:#085041;}
+.banner-rinc{background:#E6F1FB;color:#0C447C;}
+.banner-ch{background:#FAEEDA;color:#633806;}
+.cond{background:#F5F5F3;padding:12px;margin-bottom:12px;border-left:3px solid #E8401C;border-radius:0 8px 8px 0;}
+.cond-lbl{font-size:10px;font-weight:600;color:#B5300E;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;}
+.cg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.ci{display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid #ccc9c0;border-radius:8px;cursor:pointer;font-size:13px;color:#1a1a18;user-select:none;transition:border-color .15s,background .15s;}
+.ci:hover{border-color:#E8401C;background:#FDF0ED;}
+.ci.on{border-color:#E8401C;background:#FDF0ED;color:#B5300E;}
+.flg{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.flc{border:1px solid #ccc9c0;border-radius:8px;padding:13px;cursor:pointer;transition:border-color .15s,box-shadow .15s;}
+.flc:hover{border-color:#E8401C;}
+.flc.sel{border:2px solid #E8401C;background:#FDF0ED;}
+.flc h3{font-size:14px;font-weight:600;margin-bottom:2px;}
+.flp{font-size:12px;font-weight:600;color:#E8401C;margin-bottom:8px;}
+.fll{font-size:10px;font-weight:600;color:#888780;text-transform:uppercase;letter-spacing:.04em;margin:7px 0 4px;}
+.flc ul{font-size:12px;color:#5F5E5A;padding-left:14px;line-height:1.7;}
+.nav{display:flex;justify-content:space-between;align-items:center;margin-top:20px;}
+.nav-lbl{font-size:12px;color:#888780;}
+.btn{font-size:13px;padding:10px 20px;border-radius:8px;border:1px solid #ccc9c0;background:#fff;color:#1a1a18;cursor:pointer;font-weight:500;transition:background .12s;}
+.btn:hover{background:#F5F5F3;}
+.btn-primary{background:#E8401C;color:#fff;border-color:#B5300E;}
+.btn-primary:hover{background:#B5300E;}
+.btn:disabled{background:#e0ddd6;color:#888780;border-color:#e0ddd6;cursor:not-allowed;}
+.step{display:none;}.step.on{display:block;}
+.success{display:none;text-align:center;padding:40px 20px;}
+.success-icon{width:64px;height:64px;border-radius:50%;background:#EAF3DE;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px;}
+.success h2{font-size:22px;font-weight:600;margin-bottom:8px;}
+.success p{font-size:14px;color:#5F5E5A;line-height:1.6;}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+@media(max-width:500px){.g2,.cg,.flg{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="qw">
+  <div class="hdr">
+    <img src="https://benchmarkcd.github.io/benchmark-crm/logo.png" alt="Benchmark Construction & Development">
+    <h2>Project questionnaire</h2>
+    <p>Help us understand your project before your strategy meeting.</p>
+  </div>
+  <div class="prog-wrap" id="prog-wrap">
+    <div class="prog-bar-track"><div class="prog-bar-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="prog-labels" id="prog-labels"></div>
+  </div>
+  <div class="card" id="main-card">
+    <div id="success" class="success">
+      <div class="success-icon">✓</div>
+      <h2>Thank you!</h2>
+      <p>Your questionnaire has been submitted successfully.<br><br>Our team will review your responses and reach out to schedule your strategy meeting.</p>
+    </div>
+
+    <!-- Step 0: Division selector -->
+    <div class="step on" id="s0">
+      <div class="fg">
+        <label style="font-size:14px;font-weight:500;color:#1a1a18;margin-bottom:8px;display:block;">What type of project are you planning? <span class="req">*</span></label>
+        <select id="sel-div" onchange="onDivChange(this.value)" style="font-size:14px;padding:11px;">
+          <option value="">Select a project type...</option>
+          <option value="ld">Land Development</option>
+          <option value="rir">Residential Investment — Renovations</option>
+          <option value="rinc">Residential Investment — New Construction</option>
+          <option value="ch">Custom Home</option>
+        </select>
+      </div>
+      <div id="div-preview" style="display:none;margin-top:8px;font-size:13px;color:#5F5E5A;padding:10px 13px;background:#F5F5F3;border-radius:8px;line-height:1.6;"></div>
+    </div>
+
+    <!-- Step 1: Project info -->
+    <div class="step" id="s1">
+      <div id="s1-banner"></div>
+      <div class="st">Project location</div>
+      <div id="s1-addr-std">
+        <div class="fg"><label id="s1-street-lbl">Street address</label><input type="text" id="f-street" placeholder="123 Main St"></div>
+        <div class="g2">
+          <div class="fg"><label>City</label><input type="text" id="f-city" placeholder="Raleigh"></div>
+          <div class="fg"><label>Zip code</label><input type="text" id="f-zip" placeholder="27601"></div>
+        </div>
+        <div id="s1-taxid-opt" style="display:none;">
+          <div class="g2">
+            <div class="fg"><label>Tax ID / Parcel number <span class="hint">(if no address assigned yet)</span></label><input type="text" id="f-taxid" placeholder="e.g. 1234-56-7890"></div>
+            <div class="fg"><label>County</label><input type="text" id="f-county" placeholder="e.g. Wake County"></div>
+          </div>
+        </div>
+      </div>
+      <div id="s1-addr-ld" style="display:none;">
+        <div class="fg"><label>Street address <span class="hint">(leave blank if not yet assigned)</span></label><input type="text" id="f-street-ld" placeholder="Leave blank if no address assigned yet"></div>
+        <div class="g2">
+          <div class="fg"><label>City</label><input type="text" id="f-city-ld" placeholder="Raleigh"></div>
+          <div class="fg"><label>Zip code</label><input type="text" id="f-zip-ld" placeholder="27601"></div>
+        </div>
+        <div class="g2">
+          <div class="fg"><label>Tax ID / Parcel number <span class="hint">(if no street address)</span></label><input type="text" id="f-taxid-ld" placeholder="e.g. 1234-56-7890"></div>
+          <div class="fg"><label>County</label><input type="text" id="f-county-ld" placeholder="e.g. Wake County"></div>
+        </div>
+      </div>
+      <!-- Owner — standard (ld, rir, rinc) -->
+      <div id="s1-owner-std">
+        <div class="st">Owner information</div>
+        <div class="fg"><label>Owner name <span class="req">*</span></label><input type="text" id="f-owner" placeholder="Full name or LLC"></div>
+        <div class="fg"><label>Owner address</label><input type="text" id="f-owner-addr" placeholder="123 Owner St, Raleigh 27601"></div>
+        <div class="g2">
+          <div class="fg"><label>Email <span class="req">*</span></label><input type="email" id="f-email" placeholder="email@company.com"></div>
+          <div class="fg"><label>Phone</label><input type="tel" id="f-phone" placeholder="(919) 555-0100"></div>
+        </div>
+        <div class="fg" id="s1-contact-wrap">
+          <label>Contact name <span class="hint">(if different from owner)</span></label>
+          <input type="text" id="f-contact" placeholder="Primary contact name">
+        </div>
+      </div>
+      <!-- Owner — Custom Home (no LLC, no separate contact) -->
+      <div id="s1-owner-ch" style="display:none;">
+        <div class="st">Your information</div>
+        <div class="fg"><label>Your name <span class="req">*</span></label><input type="text" id="f-owner-ch" placeholder="Full name"></div>
+        <div class="fg"><label>Your address</label><input type="text" id="f-owner-addr-ch" placeholder="123 Owner St, Raleigh 27601"></div>
+        <div class="g2">
+          <div class="fg"><label>Email <span class="req">*</span></label><input type="email" id="f-email-ch" placeholder="email@company.com"></div>
+          <div class="fg"><label>Phone</label><input type="tel" id="f-phone-ch" placeholder="(919) 555-0100"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Description -->
+    <div class="step" id="s2">
+      <div id="s2-banner"></div>
+      <div class="st">Project description</div>
+      <div class="fg"><label id="s2-describe-lbl">Describe what you want to build <span class="req">*</span></label>
+        <textarea id="f-describe" style="min-height:85px;" placeholder="Describe your project in detail..."></textarea>
+      </div>
+      <div class="fg"><label>Exit strategy</label>
+        <select id="f-exit" onchange="onExitChange(this.value)">
+          <option value="">Select...</option>
+        </select>
+      </div>
+      <div class="cond" id="exit-sell" style="display:none;">
+        <div class="cond-lbl" id="exit-sell-lbl">Sell</div>
+        <div class="fg"><label>Do you have a real estate agent you are working with? If so, who?</label><input type="text" id="f-agent" placeholder="Agent name or 'No'"></div>
+        <div class="fg" style="margin:0;" id="exit-sell-price-wrap">
+          <label id="exit-sell-price-lbl">What is the estimated list price of each unit?</label>
+          <input type="text" id="f-list-price" placeholder="e.g. $450,000 per unit">
+        </div>
+      </div>
+      <div class="cond" id="exit-rent" style="display:none;">
+        <div class="cond-lbl" id="exit-rent-lbl">Rent</div>
+        <div class="fg"><label>Do you have a property manager you are working with? If so, who?</label><input type="text" id="f-pm" placeholder="Property manager name or 'No'"></div>
+        <div class="fg" style="margin:0;">
+          <label id="exit-rent-price-lbl">What is the estimated rent of each unit?</label>
+          <input type="text" id="f-rent" placeholder="e.g. $2,200/month per unit">
+        </div>
+      </div>
+      <div class="cond" id="exit-other" style="display:none;">
+        <div class="cond-lbl">Other</div>
+        <div class="fg" style="margin:0;"><label>Please describe your exit strategy</label>
+          <textarea id="f-exit-other" style="min-height:65px;"></textarea>
+        </div>
+      </div>
+      <div class="fg" style="margin-top:4px;"><label>Do you have a lender you are working with? If so, who?</label>
+        <input type="text" id="f-lender" placeholder="Lender name or 'No'">
+      </div>
+      <div id="s2-occupant" style="display:none;">
+        <div class="fg"><label>Who will live in / use this property? Describe their lifestyle or intended use.</label>
+          <textarea id="f-occupant" style="min-height:70px;" placeholder="e.g. Young professionals, families looking for rental housing in North Raleigh..."></textarea>
+        </div>
+      </div>
+      <div id="s2-land" style="display:none;">
+        <div class="st">Land details</div>
+        <div class="g2">
+          <div class="fg"><label>Total acreage</label><input type="text" id="f-acreage" placeholder="e.g. 2.4 acres"></div>
+          <div class="fg"><label>Number of planned units / lots</label><input type="text" id="f-units-ld" placeholder="e.g. 6 units"></div>
+        </div>
+        <div class="g2">
+          <div class="fg"><label>Current zoning</label><input type="text" id="f-zoning" placeholder="e.g. R-4, Mixed Use"></div>
+          <div class="fg"><label>Intended development type</label><input type="text" id="f-dev-type" placeholder="e.g. Townhome development"></div>
+        </div>
+      </div>
+      <div id="s2-rinc" style="display:none;">
+        <div class="st">Build details</div>
+        <div class="g2">
+          <div class="fg"><label>Number of planned units</label><input type="text" id="f-units-rinc" placeholder="e.g. 4 units"></div>
+          <div class="fg"><label>Total sq footage (all units)</label><input type="text" id="f-sqft-rinc" placeholder="e.g. 6,400 sqft total"></div>
+        </div>
+      </div>
+      <div id="s2-rir" style="display:none;">
+        <div class="st">Renovation details</div>
+        <div class="fg"><label>Current property condition — describe scope of renovation needed</label>
+          <textarea id="f-condition" style="min-height:75px;" placeholder="Roof is 15 years old, kitchen and bathrooms need full update, HVAC replaced 5 years ago..."></textarea>
+        </div>
+        <div class="fg"><label>Estimated ARV after renovation</label>
+          <input type="text" id="f-arv" placeholder="e.g. $385,000">
+        </div>
+      </div>
+      <div id="s2-ch" style="display:none;">
+        <div class="st">Home details</div>
+        <div class="g2">
+          <div class="fg"><label>Desired home size (sq ft)</label><input type="text" id="f-home-size" placeholder="e.g. 2,800 sqft"></div>
+          <div class="fg"><label>Bedrooms / bathrooms</label><input type="text" id="f-bed-bath" placeholder="e.g. 4 bed / 3 bath"></div>
+        </div>
+        <div class="fg"><label>Describe your lifestyle and how you plan to use the home</label>
+          <textarea id="f-lifestyle" style="min-height:75px;" placeholder="Family of 4, two young children, love to entertain outdoors, need a home office..."></textarea>
+        </div>
+      </div>
+      <div class="fg" style="margin-top:4px;"><label>How do you define success?</label>
+        <textarea id="f-success" style="min-height:70px;" placeholder="Describe what a successful outcome looks like for this project..."></textarea>
+      </div>
+    </div>
+
+    <!-- Step 3: Checklist -->
+    <div class="step" id="s3">
+      <div id="s3-banner"></div>
+      <div class="st">Development process checklist</div>
+      <p style="font-size:13px;color:#5F5E5A;margin-bottom:14px;line-height:1.6;">Check all that apply to your current stage in the process.</p>
+      <div class="cg" id="checklist-items"></div>
+      <div class="fg"><label>Additional notes about where you are in the process</label>
+        <textarea id="f-checklist-notes" style="min-height:65px;" placeholder="Any additional context..."></textarea>
+      </div>
+    </div>
+
+    <!-- Step 4: Finish level (rinc and ch only) -->
+    <div class="step" id="s4">
+      <div id="s4-banner"></div>
+      <div class="st">Choose your desired finish level</div>
+      <p style="font-size:12px;color:#5F5E5A;margin-bottom:14px;line-height:1.65;">For education purposes only. Prices are approximate, excluding site work and infrastructure. Projects with greater than 12 units typically see a volume discount. Units under 1,300 sqft will likely have higher sqft prices.</p>
+      <div class="flg">
+        <div class="flc" onclick="selFinish(this,'Level 1')">
+          <h3>Level 1</h3><div class="flp">$140/sqft +</div>
+          <div class="fll">Exterior</div><ul><li>Vinyl siding</li><li>Slab or stucco foundation</li><li>No garage, no deck</li><li>Gravel driveway</li><li>Basic landscaping</li></ul>
+          <div class="fll">Interior</div><ul><li>Production cabinets</li><li>Granite countertops</li><li>LVP flooring, no tile</li><li>Fiberglass tub/shower</li><li>Basic electric appliances</li></ul>
+        </div>
+        <div class="flc" onclick="selFinish(this,'Level 2')">
+          <h3>Level 2</h3><div class="flp">$175/sqft +</div>
+          <div class="fll">Exterior</div><ul><li>Hardie plank siding</li><li>Slab or stucco foundation</li><li>Possible garage</li><li>Concrete driveway/walkways</li><li>Basic landscaping</li></ul>
+          <div class="fll">Interior</div><ul><li>Production cabinets</li><li>Level 1 quartz countertops</li><li>LVP flooring</li><li>Budget tile, tile shower/tub</li><li>Basic appliances</li></ul>
+        </div>
+        <div class="flc" onclick="selFinish(this,'Level 3')">
+          <h3>Level 3</h3><div class="flp">$200/sqft +</div>
+          <div class="fll">Exterior</div><ul><li>Hardie plank siding</li><li>Brick foundation</li><li>2–3 car garage</li><li>Screen porch, sod</li><li>Vinyl double hung windows</li><li>Concrete driveway/walkways</li></ul>
+          <div class="fll">Interior</div><ul><li>Production cabinets</li><li>Level 3 quartz countertops</li><li>Engineered hardwood flooring</li><li>Tile shower/tub surround</li><li>Gas fireplace, accent walls</li><li>Upgraded appliances</li></ul>
+        </div>
+        <div class="flc" onclick="selFinish(this,'Level 4')">
+          <h3>Level 4</h3><div class="flp">$250/sqft +</div>
+          <div class="fll">Exterior</div><ul><li>Hardie plank + some brick veneer</li><li>Brick foundation</li><li>3–4 car garage</li><li>Screen porch, sod</li><li>Premium windows</li><li>Custom landscaping</li></ul>
+          <div class="fll">Interior</div><ul><li>Custom cabinets</li><li>Level 3 quartz countertops</li><li>Engineered hardwood flooring</li><li>Designer tile, tile shower/tub</li><li>Gas fireplace, accent walls</li><li>Luxury appliances</li></ul>
+        </div>
+      </div>
+      <div class="fg" style="margin-top:14px;"><label>Additional notes or questions about finish levels</label>
+        <textarea id="f-finish-notes" style="min-height:65px;" placeholder="Any specific finishes, preferences, or questions..."></textarea>
+      </div>
+    </div>
+
+    <!-- Nav -->
+    <div id="nav-wrap" style="display:none;">
+      <div class="nav">
+        <button class="btn" id="btn-back" onclick="goStep(-1)" style="display:none;">← Back</button>
+        <span class="nav-lbl" id="nav-lbl"></span>
+        <button class="btn btn-primary" id="btn-next" onclick="goStep(1)">Next →</button>
+      </div>
+    </div>
+  </div>
+  <p style="text-align:center;font-size:12px;color:#888780;margin-top:8px;line-height:1.5;">Your information is kept private and will only be used to prepare for your strategy meeting.<br>© Benchmark Construction & Development · <a href="https://benchmarkcd.com" style="color:#888780;">benchmarkcd.com</a></p>
+</div>
+
+<script>
+const SB_URL='https://vgmaiwqvnzikyyiittct.supabase.co';
+const SB_KEY='sb_publishable_bcMWQF6-NADFB3_PYrYCrA_c-bUSxlL';
+
+let curDiv='';
+let curStep=0;
+let selectedFinish='';
+window._crmContactId=null;
+
+const CFG={
+  ld:{label:'Land Development',bannerCls:'banner-ld',steps:[0,1,2,3],
+    exitOpts:['Sell lots','Build to sell','Build to rent','Other'],
+    describe:'Describe what you want to develop',
+    preview:'For parcels being subdivided, developed, or built on for investment.',
+    checklist:['Survey','Zoning research complete','Communication with planning dept','Engaged civil engineer','Soil report from soil scientist','Utilities availability verified','Subdivision complete','Site plan approved','Inspiration pictures','Floor plan chosen','Architectural plans drawn','Interior design complete','Permit applied for','Financing secured']},
+  rir:{label:'Residential Investment — Renovations',bannerCls:'banner-rir',steps:[0,1,2,3],
+    exitOpts:['Sell','Rent','Other'],
+    describe:'Describe what you want to renovate',
+    preview:'For existing properties being renovated for resale or rental income.',
+    checklist:['Inspiration pictures','Floor plan chosen','Architectural plans drawn','Interior design complete','Permit applied for','Financing secured']},
+  rinc:{label:'Residential Investment — New Construction',bannerCls:'banner-rinc',steps:[0,1,2,3,4],
+    exitOpts:['Sell','Rent','Other'],
+    describe:'Describe what you want to build',
+    preview:'For new residential construction intended for resale or rental.',
+    checklist:['Survey','Zoning research complete','Communication with planning dept','Engaged civil engineer','Soil report from soil scientist','Utilities availability verified','Subdivision complete','Site plan approved','Inspiration pictures','Floor plan chosen','Architectural plans drawn','Interior design complete','Permit applied for','Financing secured']},
+  ch:{label:'Custom Home',bannerCls:'banner-ch',steps:[0,1,2,3,4],
+    exitOpts:['Owner occupied','Other'],
+    describe:'Describe what you want to build',
+    preview:'For families building a custom home for personal use.',
+    checklist:['Survey','Lot purchased','Zoning research complete','Soil report from soil scientist','Utilities availability verified','Site plan approved','Inspiration pictures','Floor plan chosen','Architectural plans drawn','Interior design complete','Permit applied for','Financing secured']}
+};
+
+function prefillFromURL(){
+  const p=new URLSearchParams(window.location.search);
+  if(p.get('name'))document.getElementById('f-owner-ch').value=p.get('name');
+  if(p.get('email')){document.getElementById('f-email').value=p.get('email');document.getElementById('f-email-ch').value=p.get('email');}
+  if(p.get('phone')){document.getElementById('f-phone').value=p.get('phone');document.getElementById('f-phone-ch').value=p.get('phone');}
+  if(p.get('llc'))document.getElementById('f-owner').value=p.get('llc');
+  if(p.get('cid'))window._crmContactId=p.get('cid');
+  const divParam=p.get('div');
+  if(divParam){
+    const map={'Land Development':'ld','Residential Investment Renovations':'rir','Residential Investment New Construction':'rinc','Custom Homes':'ch','Custom Home':'ch'};
+    const mapped=map[divParam]||Object.keys(CFG).find(k=>k===divParam)||'';
+    if(mapped){document.getElementById('sel-div').value=mapped;onDivChange(mapped);}
+  }
+}
+
+function onDivChange(val){
+  curDiv=val;
+  const cfg=CFG[val];
+  const preview=document.getElementById('div-preview');
+  const navWrap=document.getElementById('nav-wrap');
+  if(!val||!cfg){preview.style.display='none';navWrap.style.display='none';updateProgress();return;}
+  preview.style.display='block';
+  preview.innerHTML='<strong>'+cfg.label+'</strong><br><span style="font-size:12px;">'+cfg.preview+'</span>';
+  navWrap.style.display='block';
+  document.getElementById('btn-back').style.display='none';
+  document.getElementById('btn-next').textContent='Next →';
+  document.getElementById('btn-next').disabled=false;
+  updateProgress();
+}
+
+function getSteps(){return curDiv?CFG[curDiv].steps:[0];}
+
+function goStep(dir){
+  const steps=getSteps();
+  const curIdx=steps.indexOf(curStep);
+  if(dir===1){if(!validateCurrent())return;if(curIdx>=steps.length-1){submitForm();return;}curStep=steps[curIdx+1];}
+  else{if(curIdx<=0)return;curStep=steps[curIdx-1];}
+  renderStep();
+}
+
+function renderStep(){
+  [0,1,2,3,4].forEach(i=>document.getElementById('s'+i).classList.remove('on'));
+  document.getElementById('s'+curStep).classList.add('on');
+  const cfg=CFG[curDiv];
+  const steps=getSteps();
+  const bannerHtml='<div class="banner '+cfg.bannerCls+'">Division: '+cfg.label+'</div>';
+  ['s1-banner','s2-banner','s3-banner','s4-banner'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=bannerHtml;});
+
+  if(curStep===1){
+    const isLd=curDiv==='ld',isCh=curDiv==='ch',needsTax=curDiv==='rinc'||curDiv==='ch';
+    document.getElementById('s1-addr-std').style.display=isLd?'none':'block';
+    document.getElementById('s1-addr-ld').style.display=isLd?'block':'none';
+    document.getElementById('s1-taxid-opt').style.display=needsTax?'block':'none';
+    const sl=document.getElementById('s1-street-lbl');
+    if(sl)sl.innerHTML=needsTax?'Street address <span class="hint">(if available)</span>':'Street address';
+    document.getElementById('s1-owner-std').style.display=isCh?'none':'block';
+    document.getElementById('s1-owner-ch').style.display=isCh?'block':'none';
+  }
+
+  if(curStep===2){
+    document.getElementById('s2-describe-lbl').innerHTML=cfg.describe+' <span class="req">*</span>';
+    const sel=document.getElementById('f-exit');
+    sel.innerHTML='<option value="">Select...</option>'+cfg.exitOpts.map(o=>'<option>'+o+'</option>').join('');
+    sel.value='';
+    ['exit-sell','exit-rent','exit-other'].forEach(id=>document.getElementById(id).style.display='none');
+    document.getElementById('s2-land').style.display=curDiv==='ld'?'block':'none';
+    document.getElementById('s2-rinc').style.display=curDiv==='rinc'?'block':'none';
+    document.getElementById('s2-rir').style.display=curDiv==='rir'?'block':'none';
+    document.getElementById('s2-ch').style.display=curDiv==='ch'?'block':'none';
+    document.getElementById('s2-occupant').style.display='none';
+  }
+
+  if(curStep===3){
+    document.getElementById('checklist-items').innerHTML=cfg.checklist.map(item=>
+      '<label class="ci" onclick="this.classList.toggle(\'on\');this.querySelector(\'input\').checked=this.classList.contains(\'on\');"><input type="checkbox" style="accent-color:#E8401C;width:14px;height:14px;flex-shrink:0;" onclick="event.stopPropagation();"> '+item+'</label>'
+    ).join('');
+  }
+
+  const curIdx=steps.indexOf(curStep);
+  const isLast=curIdx===steps.length-1;
+  document.getElementById('btn-back').style.display=curIdx===0?'none':'inline-block';
+  document.getElementById('btn-next').textContent=isLast?'Submit questionnaire':'Next →';
+  document.getElementById('btn-next').disabled=false;
+  document.getElementById('nav-lbl').textContent='Step '+(curIdx+1)+' of '+steps.length;
+  updateProgress();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function onExitChange(val){
+  ['exit-sell','exit-rent','exit-other'].forEach(id=>document.getElementById(id).style.display='none');
+  if(val==='Sell lots'||val==='Build to sell'||val==='Sell'){
+    document.getElementById('exit-sell').style.display='block';
+    document.getElementById('exit-sell-lbl').textContent=val;
+    const pLbl=document.getElementById('exit-sell-price-lbl');
+    const pWrap=document.getElementById('exit-sell-price-wrap');
+    if(val==='Sell lots'){pLbl.textContent='What is the estimated price per lot?';pWrap.style.display='block';}
+    else if(val==='Sell'&&curDiv==='rir'){pWrap.style.display='none';}
+    else{pLbl.textContent='What is the estimated list price of each unit?';pWrap.style.display='block';}
+  } else if(val==='Build to rent'||val==='Rent'){
+    document.getElementById('exit-rent').style.display='block';
+    document.getElementById('exit-rent-lbl').textContent=val;
+    const pLbl=document.getElementById('exit-rent-price-lbl');
+    if(pLbl)pLbl.textContent=curDiv==='rir'?'What is the estimated rent?':'What is the estimated rent of each unit?';
+  } else if(val==='Other'){
+    document.getElementById('exit-other').style.display='block';
+  }
+  document.getElementById('s2-occupant').style.display=(curDiv==='rinc'||curDiv==='rir')?'block':'none';
+}
+
+function selFinish(card,level){
+  document.querySelectorAll('.flc').forEach(c=>c.classList.remove('sel'));
+  card.classList.add('sel');selectedFinish=level;
+}
+
+function updateProgress(){
+  const steps=getSteps().filter(s=>s>0);
+  const fill=document.getElementById('prog-fill');
+  const labels=document.getElementById('prog-labels');
+  if(!curDiv||steps.length===0){fill.style.width='0%';labels.innerHTML='';return;}
+  const stepLabels={1:'Project info',2:'Description',3:'Checklist',4:'Finish level'};
+  const curIdx=steps.indexOf(curStep);
+  const pct=curStep===0?0:((curIdx+1)/steps.length)*100;
+  fill.style.width=pct+'%';
+  labels.innerHTML=steps.map((s,i)=>{
+    let cls='pl';if(i<curIdx)cls='pl done';else if(s===curStep)cls='pl active';
+    return'<span class="'+cls+'">'+stepLabels[s]+'</span>';
+  }).join('');
+}
+
+function validateCurrent(){
+  if(curStep===0&&!curDiv){alert('Please select a project type to continue.');return false;}
+  if(curStep===1){
+    const isCh=curDiv==='ch';
+    const ownerEl=document.getElementById(isCh?'f-owner-ch':'f-owner');
+    const emailEl=document.getElementById(isCh?'f-email-ch':'f-email');
+    if(!ownerEl.value.trim()){alert('Owner name is required.');ownerEl.focus();return false;}
+    if(!emailEl.value.trim()||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEl.value)){alert('A valid email address is required.');emailEl.focus();return false;}
+  }
+  if(curStep===2&&!document.getElementById('f-describe').value.trim()){
+    alert('Please describe your project.');document.getElementById('f-describe').focus();return false;
+  }
+  return true;
+}
+
+async function submitForm(){
+  const btn=document.getElementById('btn-next');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span>Submitting...';
+
+  const isCh=curDiv==='ch';
+  const checkedItems=[...document.querySelectorAll('#checklist-items .ci.on input')].map(cb=>cb.nextSibling?.textContent?.trim()||cb.parentElement.textContent.trim());
+
+  const data={
+    division:CFG[curDiv]?.label||curDiv,
+    projectAddress:{
+      street:(document.getElementById('f-street-ld')?.value||document.getElementById('f-street')?.value||'').trim(),
+      city:(document.getElementById('f-city-ld')?.value||document.getElementById('f-city')?.value||'').trim(),
+      zip:(document.getElementById('f-zip-ld')?.value||document.getElementById('f-zip')?.value||'').trim(),
+      taxId:(document.getElementById('f-taxid-ld')?.value||document.getElementById('f-taxid')?.value||'').trim(),
+      county:(document.getElementById('f-county-ld')?.value||document.getElementById('f-county')?.value||'').trim()
+    },
+    ownerName:(isCh?document.getElementById('f-owner-ch'):document.getElementById('f-owner'))?.value.trim()||'',
+    ownerAddress:(isCh?document.getElementById('f-owner-addr-ch'):document.getElementById('f-owner-addr'))?.value.trim()||'',
+    email:(isCh?document.getElementById('f-email-ch'):document.getElementById('f-email'))?.value.trim()||'',
+    phone:(isCh?document.getElementById('f-phone-ch'):document.getElementById('f-phone'))?.value.trim()||'',
+    contactName:document.getElementById('f-contact')?.value.trim()||'',
+    description:document.getElementById('f-describe')?.value.trim()||'',
+    exitStrategy:document.getElementById('f-exit')?.value||'',
+    agent:document.getElementById('f-agent')?.value.trim()||'',
+    listPrice:document.getElementById('f-list-price')?.value.trim()||'',
+    propertyManager:document.getElementById('f-pm')?.value.trim()||'',
+    estimatedRent:document.getElementById('f-rent')?.value.trim()||'',
+    exitOtherDesc:document.getElementById('f-exit-other')?.value.trim()||'',
+    lender:document.getElementById('f-lender')?.value.trim()||'',
+    occupantDescription:document.getElementById('f-occupant')?.value.trim()||'',
+    lifestyle:document.getElementById('f-lifestyle')?.value.trim()||'',
+    acreage:document.getElementById('f-acreage')?.value.trim()||'',
+    plannedUnits:(document.getElementById('f-units-ld')?.value||document.getElementById('f-units-rinc')?.value||'').trim(),
+    zoning:document.getElementById('f-zoning')?.value.trim()||'',
+    devType:document.getElementById('f-dev-type')?.value.trim()||'',
+    sqft:document.getElementById('f-sqft-rinc')?.value.trim()||'',
+    homeSize:document.getElementById('f-home-size')?.value.trim()||'',
+    bedBath:document.getElementById('f-bed-bath')?.value.trim()||'',
+    propertyCondition:document.getElementById('f-condition')?.value.trim()||'',
+    arv:document.getElementById('f-arv')?.value.trim()||'',
+    defineSuccess:document.getElementById('f-success')?.value.trim()||'',
+    checklistItems:checkedItems,
+    checklistNotes:document.getElementById('f-checklist-notes')?.value.trim()||'',
+    finishLevel:selectedFinish||'Not selected',
+    finishNotes:document.getElementById('f-finish-notes')?.value.trim()||'',
+    submittedAt:new Date().toISOString(),
+    status:'new'
+  };
+
+  try{
+    const res=await fetch(SB_URL+'/rest/v1/questionnaire_submissions',{
+      method:'POST',
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
+      body:JSON.stringify({data,contact_id:window._crmContactId||null})
+    });
+    if(!res.ok)throw new Error(await res.text());
+    document.getElementById('s'+curStep).classList.remove('on');
+    document.getElementById('nav-wrap').style.display='none';
+    document.getElementById('prog-wrap').style.display='none';
+    document.getElementById('success').style.display='block';
+  }catch(err){
+    console.error(err);
+    btn.disabled=false;
+    btn.innerHTML='Submit questionnaire';
+    alert('There was a problem submitting. Please try again or contact us directly.');
+  }
+}
+
+prefillFromURL();
+document.getElementById('s0').classList.add('on');
+updateProgress();
+</script>
+</body>
+</html>
