@@ -585,11 +585,7 @@ async function checkFormSubmissions(){
           lastActivity:today(),
           stageDate:today(),
           createdDate:today(),
-          notes:sub.notes?[{text:'Timeline: '+(sub.timeline||'Not specified')+'
-
-Project notes: '+sub.notes+(sub.existingClient?'
-
-Existing client: Yes':''),ts:new Date(sub.submittedAt).toLocaleString()}]:[],
+          notes:sub.notes?[{text:'Timeline: '+(sub.timeline||'Not specified')+'\n\nProject notes: '+sub.notes+(sub.existingClient?'\n\nExisting client: Yes':''),ts:new Date(sub.submittedAt).toLocaleString()}]:[],
           log:[{msg:'Contact submitted via intake form',ts:new Date(sub.submittedAt).toLocaleString(),user:-1}],
           comms:[],
           fromForm:true
