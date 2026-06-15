@@ -449,7 +449,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 </div></div>
 
 <!-- Gmail compose modal -->
-<div class="modal-overlay" id="gmail-modal"><div class="modal modal-lg">
+<div class="modal-overlay" id="gmail-modal" style="z-index:200;"><div class="modal modal-lg">
   <h2>✉ Send email</h2>
   <div id="gmail-auth-warning" style="display:none;background:var(--amlt);border:1px solid var(--am);border-radius:var(--r);padding:12px;font-size:13px;color:var(--am);margin-bottom:14px;">
     ⚠️ You need to connect your Gmail account first. <button class="btn btn-sm btn-warn" onclick="gmailSignIn()">Connect Gmail</button>
@@ -1776,9 +1776,12 @@ function openGmailCompose(contactId){
   document.getElementById('gm-to').value=c.email||'';
   document.getElementById('gm-cc').value='';
   // Auto-load the right drip template for their current stage
-  const stageTemplate=c.stage;
-  loadDripTemplate(stageTemplate,c);
+  loadDripTemplate(c.stage,c);
   document.getElementById('gm-send-status').style.display='none';
+  // Close any other open modals so gmail compose appears on top
+  document.querySelectorAll('.modal-overlay.open').forEach(m=>{
+    if(m.id!=='gmail-modal')m.classList.remove('open');
+  });
   document.getElementById('gmail-modal').classList.add('open');
 }
 
@@ -1866,7 +1869,11 @@ function sendGmail(){
           saveState();
         }
       }
-      setTimeout(()=>closeModal('gmail-modal'),2000);
+      // Close gmail modal and reopen contact detail after short delay
+      setTimeout(()=>{
+        closeModal('gmail-modal');
+        if(gmailComposeContactId)showContact(gmailComposeContactId);
+      },1500);
     }else{
       r.json().then(err=>{
         statusEl.style.color='var(--rd)';
