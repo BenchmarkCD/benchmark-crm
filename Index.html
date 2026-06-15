@@ -149,7 +149,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <span id="hdr-ov" style="display:none;" class="badge badge-red" onclick="showView('tasks',navBtn(3));setVal('tf','overdue');renderTasks();"></span>
     <span id="hdr-ag" style="display:none;" class="badge badge-am"></span>
     <span id="hdr-nb" style="display:none;" class="badge badge-bl" onclick="toggleNotif()"></span>
-    <select id="active-user" onchange="saveState();setViewMode('my');renderDB();renderFeed();"></select>
+    <select id="active-user" onchange="saveState();setViewMode('my');restoreGmailForUser();renderDB();renderFeed();"></select>
   </div>
 </div>
 <div class="nav" id="mnav">
@@ -355,8 +355,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   <div class="m-actions"><button class="btn" onclick="closeModal('task-modal')">Cancel</button><button class="btn btn-primary" onclick="saveTask()">Save</button></div>
 </div></div>
 
-<!-- Deal -->
-<div <!-- Project -->
+<!-- Project -->
+<div
 <div class="modal-overlay" id="project-modal"><div class="modal modal-xl">
   <h2 id="pm-title">Add project</h2>
   <div class="g2">
@@ -477,7 +477,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
 <!-- Detail -->
 <div class="modal-overlay" id="detail-modal"><div class="modal modal-xl" id="detail-inner"></div></div>
-<!-- Deal detail -->
+<!-- Project detail -->
 <div class="modal-overlay" id="project-detail-modal"><div class="modal modal-lg" id="project-detail-inner"></div></div>
 <script>
 const SK='bcd_v9';
@@ -501,7 +501,7 @@ function setViewMode(mode){
   const active=document.querySelector('.view.active');
   if(active){
     const id=active.id.replace('v-','');
-    const renders={dashboard:()=>{renderDB();renderFeed();renderRadar();},contacts:renderContacts,pipeline:renderPipeline,tasks:renderTasks,deals:renderDeals,reports:renderReports,goals:renderGoals,team:renderTeam};
+    const renders={dashboard:()=>{renderDB();renderFeed();renderRadar();},contacts:renderContacts,pipeline:renderPipeline,tasks:renderTasks,projects:renderProjects,reports:renderReports,goals:renderGoals,team:renderTeam};
     renders[id]?.();
   }
 }
@@ -511,7 +511,7 @@ function myFilter(assignee){
   if(viewMode==='company')return true;
   return assignee==au();
 }
-let S={contacts:[],tasks:[],deals:[],activity:[],auditLog:[],nextId:1,team:['Team Member 1','Team Member 2','Team Member 3','Team Member 4'],roles:{},agingDays:{Contact:14,'Discovery Meeting':10,'Strategy Meeting':10,Proposal:14},radarDays:{hot:30,warm:60},goals:{monthly:0,quarterly:0,annual:0,byMember:{},byDivision:{}}};
+let S={contacts:[],tasks:[],projects:[],activity:[],auditLog:[],nextId:1,team:['Team Member 1','Team Member 2','Team Member 3','Team Member 4'],roles:{},agingDays:{Contact:14,'Discovery Meeting':10,'Strategy Meeting':10,Proposal:14},radarDays:{hot:30,warm:60},goals:{monthly:0,quarterly:0,annual:0,byMember:{},byDivision:{}}};
 const DS={'Land Development':'Land Dev','Residential Investment Renovations':'RI Reno','Residential Investment New Construction':'RI New Const','Custom Homes':'Custom Homes'};
 const DC={'Land Development':'tl','Residential Investment Renovations':'tr','Residential Investment New Construction':'tn','Custom Homes':'tc'};
 const DA={'Land Development':'av-l','Residential Investment Renovations':'av-r','Residential Investment New Construction':'av-n','Custom Homes':'av-c'};
@@ -764,7 +764,7 @@ function showView(v,btn){
   document.querySelectorAll('.nav button').forEach(e=>e.classList.remove('active'));
   document.getElementById('v-'+v).classList.add('active');
   if(btn)btn.classList.add('active');
-  ({dashboard:()=>{renderDB();renderFeed();renderRadar();},contacts:renderContacts,pipeline:renderPipeline,tasks:renderTasks,deals:renderDeals,reports:renderReports,goals:renderGoals,sequences:renderSeq,drip:renderDrip,proposals:renderPropTemplates,team:renderTeam,settings:renderSettings})[v]?.();
+  ({dashboard:()=>{renderDB();renderFeed();renderRadar();},contacts:renderContacts,pipeline:renderPipeline,tasks:renderTasks,projects:renderProjects,reports:renderReports,goals:renderGoals,sequences:renderSeq,drip:renderDrip,proposals:renderPropTemplates,team:renderTeam,settings:renderSettings})[v]?.();
 }
 function showTab(id,btn){
   document.querySelectorAll('.tab-panel').forEach(e=>e.classList.remove('active'));
@@ -788,7 +788,7 @@ function renderDB(){
       <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;">${viewMode==='my'?(mn(me)+"'s view"):'Company view'}</div>
     </div>
     <div class="stat-card"><div class="stat-lbl">Contacts</div><div class="stat-val">${myC.length}</div><div class="stat-bar" style="width:100%"></div></div>
-    <div class="stat-card"><div class="stat-lbl">Active deals</div><div class="stat-val">${myProjs.filter(x=>!['Won','Lost'].includes(x.stage)).length}</div></div>
+    <div class="stat-card"><div class="stat-lbl">Active projects</div><div class="stat-val">${myProjs.filter(x=>!['Won','Lost'].includes(x.stage)).length}</div></div>
     <div class="stat-card"><div class="stat-lbl">Pipeline</div><div class="stat-val" style="font-size:15px;">$${tv.toLocaleString()}</div></div>
     <div class="stat-card"><div class="stat-lbl">Weighted</div><div class="stat-val" style="font-size:14px;color:#E8401C;">$${Math.round(wt).toLocaleString()}</div></div>
     <div class="stat-card"><div class="stat-lbl">Won</div><div class="stat-val" style="color:var(--gn);">${myProjs.filter(x=>x.stage==='Won').length}</div></div>
@@ -866,7 +866,7 @@ function renderCompanyOverview(){
       <div style="text-align:center;padding:12px;background:var(--gnlt);border-radius:var(--r);">
         <div style="font-size:11px;color:var(--gn);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Total won</div>
         <div style="font-size:22px;font-weight:700;color:var(--gn);margin-top:3px;">$${wonV.toLocaleString()}</div>
-        <div style="font-size:11px;color:var(--gn);margin-top:2px;">${won} deal${won!==1?'s':''} · ${wr}% win rate</div>
+        <div style="font-size:11px;color:var(--gn);margin-top:2px;">${won} project${won!==1?'s':''} · ${wr}% win rate</div>
       </div>
       <div style="text-align:center;padding:12px;background:var(--bllt);border-radius:var(--r);">
         <div style="font-size:11px;color:var(--bl);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Active pipeline</div>
@@ -876,7 +876,7 @@ function renderCompanyOverview(){
       <div style="text-align:center;padding:12px;background:var(--rdlt);border-radius:var(--r);">
         <div style="font-size:11px;color:var(--rd);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Total lost</div>
         <div style="font-size:22px;font-weight:700;color:var(--rd);margin-top:3px;">$${lostV.toLocaleString()}</div>
-        <div style="font-size:11px;color:var(--rd);margin-top:2px;">${lost} deal${lost!==1?'s':''}</div>
+        <div style="font-size:11px;color:var(--rd);margin-top:2px;">${lost} project${lost!==1?'s':''}</div>
       </div>
       <div style="text-align:center;padding:12px;background:var(--bg2);border-radius:var(--r);">
         <div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Total tracked</div>
@@ -1416,7 +1416,7 @@ function showContact(id){
       ${(c.notes||[]).map(n=>`<div class="note-e">${n.text}<div class="note-ts">${n.ts}</div></div>`).join('')||'<div style="font-size:13px;color:var(--text2);">No notes</div>'}
       ${canEdit()?`<div style="display:flex;gap:7px;margin-top:9px;"><input type="text" id="nn-${id}" placeholder="Add note..." style="flex:1;font-size:13px;padding:7px 10px;border-radius:var(--r);border:1px solid var(--border2);"><button class="btn btn-sm btn-primary" onclick="addNote(${id})">Add</button></div>`:''}
     </div>
-    <div class="detail-sec"><h4>Deal history</h4>
+    <div class="detail-sec"><h4>Project history</h4>
       ${(c.log||[]).slice().reverse().slice(0,10).map(l=>`<div class="log-entry"><div>${l.msg}</div><div class="log-ts">${mn(l.user)} · ${l.ts}</div></div>`).join('')||'<div style="font-size:13px;color:var(--text2);">No history</div>'}
     </div>
     ${c.questionnaireData?`<div class="detail-sec"><h4>Project questionnaire ✓</h4>
@@ -1598,10 +1598,10 @@ function expTaskICS(tid){const t=S.tasks.find(x=>x.id==tid);if(!t||!t.due){alert
 function expContactICS(id){const c=S.contacts.find(x=>x.id==id);if(!c)return;const rT=S.tasks.filter(t=>t.contactId==id&&t.due&&!t.done);if(!rT.length){alert('No upcoming tasks with due dates.');return;}const events=rT.map(t=>{const dt=t.due.replace(/-/g,'');return`BEGIN:VEVENT\nDTSTART;VALUE=DATE:${dt}\nDTEND;VALUE=DATE:${dt}\nSUMMARY:${t.title} — ${c.name}\nDESCRIPTION:${t.type||''}\nEND:VEVENT`;}).join('\n');const ics=`BEGIN:VCALENDAR\nVERSION:2.0\n${events}\nEND:VCALENDAR`;const a=document.createElement('a');a.href='data:text/calendar;charset=utf-8,'+encodeURIComponent(ics);a.download=`${c.name.replace(/\s/g,'_')}_tasks.ics`;a.click();}
 
 // ── EXPORT ──
-function exportFiltered(){const q=(document.getElementById('cs')||{}).value?.toLowerCase()||'',df=document.getElementById('cdf')?.value||'',sf=document.getElementById('csf')?.value||'',af=document.getElementById('caf')?.value;const list=S.contacts.filter(c=>(!q||[c.name,c.llc,c.email,c.phone].some(v=>v?.toLowerCase().includes(q)))&&(!df||(c.divisions&&c.divisions.includes(df)))&&(!sf||c.stage===sf)&&(af===''||af==null||c.assignee==af)&&myFilter(c.assignee));const rows=[['Name','LLC','Phone','Email','Source','Referred By','Assigned To','Divisions','Stage','Proposal Status','Deal Value','Notes']];list.forEach(c=>rows.push([c.name||'',c.llc||'',c.phone||'',c.email||'',c.source||'',c.ref||'',mn(c.assignee),(c.divisions||[]).join('; '),c.stage||'',c.propStatus||'',c.value||'',(c.notes||[]).map(n=>n.text).join(' | ')]));const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=`Benchmark_CRM_${sf||df||'All'}_${today()}.csv`;a.click();}
+function exportFiltered(){const q=(document.getElementById('cs')||{}).value?.toLowerCase()||'',df=document.getElementById('cdf')?.value||'',sf=document.getElementById('csf')?.value||'',af=document.getElementById('caf')?.value;const list=S.contacts.filter(c=>(!q||[c.name,c.llc,c.email,c.phone].some(v=>v?.toLowerCase().includes(q)))&&(!df||(c.divisions&&c.divisions.includes(df)))&&(!sf||c.stage===sf)&&(af===''||af==null||c.assignee==af)&&myFilter(c.assignee));const rows=[['Name','LLC','Phone','Email','Source','Referred By','Assigned To','Divisions','Stage','Proposal Status','Estimated Cost','Notes']];list.forEach(c=>rows.push([c.name||'',c.llc||'',c.phone||'',c.email||'',c.source||'',c.ref||'',mn(c.assignee),(c.divisions||[]).join('; '),c.stage||'',c.propStatus||'',c.value||'',(c.notes||[]).map(n=>n.text).join(' | ')]));const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=`Benchmark_CRM_${sf||df||'All'}_${today()}.csv`;a.click();}
 function exportCSV(){setVal('csf','');setVal('cdf','');setVal('cs','');exportFiltered();}
 function exportJSON(){const a=document.createElement('a');a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(S,null,2));a.download=`Benchmark_CRM_Backup_${today()}.json`;a.click();}
-function resetData(){if(!canDel()){alert('Admins only.');return;}if(!confirm('Delete ALL data?'))return;if(!confirm('Cannot be undone. Continue?'))return;S={...S,contacts:[],tasks:[],deals:[],activity:[],auditLog:[],nextId:1};saveState();renderDB();renderContacts();renderTasks();renderProjects();}
+function resetData(){if(!canDel()){alert('Admins only.');return;}if(!confirm('Delete ALL data?'))return;if(!confirm('Cannot be undone. Continue?'))return;S={...S,contacts:[],tasks:[],projects:[],activity:[],auditLog:[],nextId:1};saveState();renderDB();renderContacts();renderTasks();renderProjects();}
 
 // ── TEAM MODAL ──
 function openTeamModal(){const l=document.getElementById('team-edit-list');l.innerHTML='';S.team.forEach((n,i)=>l.appendChild(mkMRow(i,n)));document.getElementById('team-modal').classList.add('open');}
@@ -1675,13 +1675,14 @@ function initGmail(){
         // Store token — keyed by team member index so each person's Gmail persists
         const expiry=Date.now()+(response.expires_in*1000);
         const userKey='gmail_'+au();
-        localStorage.setItem(userKey+'_token',gmailAccessToken);
-        localStorage.setItem(userKey+'_email',gmailUserEmail);
-        localStorage.setItem(userKey+'_expiry',expiry);
-        // Also store in generic keys for current session
-        localStorage.setItem('gmail_token',gmailAccessToken);
-        localStorage.setItem('gmail_email',gmailUserEmail);
-        localStorage.setItem('gmail_expiry',expiry);
+        if(gmailAccessToken&&gmailUserEmail&&gmailUserEmail!=='undefined'){
+          localStorage.setItem(userKey+'_token',gmailAccessToken);
+          localStorage.setItem(userKey+'_email',gmailUserEmail);
+          localStorage.setItem(userKey+'_expiry',expiry);
+          localStorage.setItem('gmail_token',gmailAccessToken);
+          localStorage.setItem('gmail_email',gmailUserEmail);
+          localStorage.setItem('gmail_expiry',expiry);
+        }
       }).catch(e=>console.error('Profile error:',e));
     }
   });
@@ -1690,26 +1691,52 @@ function initGmail(){
   const storedEmail=localStorage.getItem(userKey+'_email')||localStorage.getItem('gmail_email');
   const storedToken=localStorage.getItem(userKey+'_token')||localStorage.getItem('gmail_token');
   const storedExpiry=localStorage.getItem(userKey+'_expiry')||localStorage.getItem('gmail_expiry');
-  if(storedEmail){
+  if(storedEmail&&storedEmail!=='undefined'){
     gmailUserEmail=storedEmail;
-    // If token is still valid, restore it
-    if(storedToken&&storedExpiry&&Date.now()<parseInt(storedExpiry)){
+    if(storedToken&&storedToken!=='undefined'&&storedExpiry&&Date.now()<parseInt(storedExpiry)){
       gmailAccessToken=storedToken;
       updateGmailStatus(true);
     } else {
-      // Token expired but we know the email — show as connected but needing refresh
-      // Try silent token refresh
-      gmailUserEmail=storedEmail;
-      updateGmailStatus(false);
-      document.getElementById('gmail-label').textContent=storedEmail+' (reconnect)';
-      document.getElementById('gmail-label').style.color='#f0a87a';
-      // Auto-request token silently (no prompt)
-      setTimeout(()=>{
-        if(gmailTokenClient){
-          gmailTokenClient.requestAccessToken({prompt:''});
-        }
-      },2000);
+      // Token expired — show email with reconnect prompt
+      gmailAccessToken=null;
+      const lbl=document.getElementById('gmail-label');
+      const dot=document.getElementById('gmail-dot');
+      if(lbl){lbl.textContent=storedEmail+' (reconnect)';lbl.style.color='#f0a87a';}
+      if(dot)dot.style.background='#f0a87a';
+      // Try silent refresh
+      setTimeout(()=>{if(gmailTokenClient)gmailTokenClient.requestAccessToken({prompt:''});},2000);
     }
+  } else {
+    // Clean up any bad 'undefined' values in storage
+    ['gmail_email','gmail_token','gmail_expiry'].forEach(k=>{
+      if(localStorage.getItem(k)==='undefined')localStorage.removeItem(k);
+    });
+  }
+}
+
+function restoreGmailForUser(){
+  // Called when switching users - restore that user's stored Gmail without re-auth
+  const userKey='gmail_'+au();
+  const storedEmail=localStorage.getItem(userKey+'_email');
+  const storedToken=localStorage.getItem(userKey+'_token');
+  const storedExpiry=localStorage.getItem(userKey+'_expiry');
+  if(storedEmail&&storedToken&&storedExpiry&&Date.now()<parseInt(storedExpiry)){
+    gmailAccessToken=storedToken;
+    gmailUserEmail=storedEmail;
+    updateGmailStatus(true);
+  } else if(storedEmail){
+    // Has email but token expired
+    gmailAccessToken=null;
+    gmailUserEmail=storedEmail;
+    const lbl=document.getElementById('gmail-label');
+    const dot=document.getElementById('gmail-dot');
+    if(lbl){lbl.textContent=storedEmail+' (reconnect)';lbl.style.color='#f0a87a';}
+    if(dot)dot.style.background='#f0a87a';
+  } else {
+    // No Gmail stored for this user
+    gmailAccessToken=null;
+    gmailUserEmail=null;
+    updateGmailStatus(false);
   }
 }
 
