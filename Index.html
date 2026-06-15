@@ -196,6 +196,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <input type="text" id="cs" placeholder="Search name, LLC, email, phone..." oninput="renderContacts()">
     <select id="cdf" onchange="renderContacts()"><option value="">All divisions</option><option>Land Development</option><option>Residential Investment Renovations</option><option>Residential Investment New Construction</option><option>Custom Homes</option></select>
     <select id="csf" onchange="renderContacts()"><option value="">All stages</option><option>Contact</option><option>Discovery Meeting</option><option>Strategy Meeting</option><option>Proposal</option><option>Planning</option><option>Contract</option><option>Won</option><option>Lost</option></select>
+    <select id="ctf" onchange="renderContacts()"><option value="">All types</option><option>Agent</option><option>Investor</option><option>Lender</option><option>Wholesaler</option><option>Other</option></select>
     <select id="caf" onchange="renderContacts()"><option value="">All assignees</option></select>
     <button class="btn btn-primary" onclick="openContactModal()">+ Add</button>
     <button class="btn btn-success" onclick="openImportModal()">⬆ Import</button>
@@ -232,7 +233,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   <div class="card"><div id="tasks-list"></div></div>
 </div>
 
-<!-- Deals -->
+<!-- Projects -->
 <div id="v-projects" class="view">
   <div class="toolbar">
     <input type="text" id="proj-s" placeholder="Search projects..." oninput="renderProjects()">
@@ -321,6 +322,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   <div class="g2"><div class="fg"><label>Contact name *</label><input id="cm-name" type="text" oninput="chkDup()"></div><div class="fg"><label>LLC / Company</label><input id="cm-llc" type="text" oninput="chkDup()"></div></div>
   <div class="g2"><div class="fg"><label>Phone</label><input id="cm-phone" type="tel"></div><div class="fg"><label>Email</label><input id="cm-email" type="email" oninput="chkDup()"></div></div>
   <div class="g2"><div class="fg"><label>Lead source</label><select id="cm-src"><option>Referral</option><option>Networking event</option><option>Repeat client</option><option>Other</option></select></div><div class="fg"><label>Referred by</label><input id="cm-ref" type="text"></div></div>
+  <div class="fg"><label>Contact type</label><div class="cbg" id="cm-type-group">
+    <label><input type="radio" name="cm-type" value="Agent"> Agent</label>
+    <label><input type="radio" name="cm-type" value="Investor"> Investor</label>
+    <label><input type="radio" name="cm-type" value="Lender"> Lender</label>
+    <label><input type="radio" name="cm-type" value="Wholesaler"> Wholesaler</label>
+    <label><input type="radio" name="cm-type" value="Other"> Other</label>
+  </div></div>
   <div class="g2"><div class="fg"><label>Assigned to</label><select id="cm-assign"></select></div><div class="fg"><label>Related contact</label><select id="cm-related"><option value="">None</option></select></div></div>
   <div class="fg"><label>Divisions</label><div class="cbg">
     <label><input type="checkbox" value="Land Development" class="div-cb" onchange="renderCF()"> Land Dev</label>
@@ -893,7 +901,10 @@ function renderRadar(){
 function getAging(){const agingSource=viewMode==='my'?S.contacts.filter(x=>x.assignee==au()):S.contacts;
   return agingSource.filter(c=>STAGES.includes(c.stage)).map(c=>({...c,days:daysDiff(c.lastActivity||c.stageDate||c.createdDate||today())})).filter(c=>c.days>=(S.agingDays[c.stage]||14)).sort((a,b)=>b.days-a.days);}
 function updateBadge(){
-  const tod=today(),ov=S.tasks.filter(t=>!t.done&&t.due&&t.due<tod).length;
+  const tod=today(),me=au();
+  // In My view show only current user's overdue tasks
+  const taskPool=viewMode==='my'?S.tasks.filter(t=>t.assignee==me):S.tasks;
+  const ov=taskPool.filter(t=>!t.done&&t.due&&t.due<tod).length;
   const ob=document.getElementById('hdr-ov');if(ov>0){ob.style.display='inline';ob.textContent=ov+' overdue';}else ob.style.display='none';
   const ag=getAging().length,ab=document.getElementById('hdr-ag');if(ag>0){ab.style.display='inline';ab.textContent=ag+' aging';}else ab.style.display='none';
   const tdt=S.tasks.filter(t=>!t.done&&t.due===tod&&t.assignee==au()).length,nb=document.getElementById('hdr-nb');if(tdt>0){nb.style.display='inline';nb.textContent=tdt+' due today';}else nb.style.display='none';
@@ -904,7 +915,8 @@ let selC=new Set();
 function renderContacts(){
   const q=(document.getElementById('cs')||{}).value?.toLowerCase()||'';
   const df=document.getElementById('cdf')?.value||'',sf=document.getElementById('csf')?.value||'',af=document.getElementById('caf')?.value;
-  const list=S.contacts.filter(c=>(!q||[c.name,c.llc,c.email,c.phone].some(v=>v?.toLowerCase().includes(q)))&&(!df||(c.divisions&&c.divisions.includes(df)))&&(!sf||c.stage===sf)&&(af===''||af==null||c.assignee==af)&&myFilter(c.assignee));
+  const tf=document.getElementById('ctf')?.value||'';
+  const list=S.contacts.filter(c=>(!q||[c.name,c.llc,c.email,c.phone].some(v=>v?.toLowerCase().includes(q)))&&(!df||(c.divisions&&c.divisions.includes(df)))&&(!sf||c.stage===sf)&&(!tf||c.contactType===tf)&&(af===''||af==null||c.assignee==af)&&myFilter(c.assignee));
   const grid=document.getElementById('contacts-grid');
   if(!list.length){grid.innerHTML='<div class="empty">No contacts found.</div>';return;}
   grid.innerHTML=list.map(c=>`<div class="c-card ${selC.has(c.id)?'selected':''}" onclick="handleCC(event,${c.id})">
@@ -913,7 +925,13 @@ function renderContacts(){
       <div class="av ${avC(c.divisions)}">${ini(c.name)}</div>
       <div style="flex:1;min-width:0;padding-right:20px;"><div style="font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.name}</div><div style="font-size:12px;color:var(--text2);">${c.llc||''}</div></div>
     </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;"><span class="tag ${SC[c.stage]}">${c.stage}</span>${c.propStatus?`<span class="prob-badge" style="font-size:10px;">${c.propStatus}</span>`:''}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;flex-wrap:wrap;gap:4px;">
+      <span class="tag ${SC[c.stage]}">${c.stage}</span>
+      <div style="display:flex;gap:4px;align-items:center;">
+        ${c.contactType?`<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:var(--bg3);color:var(--text2);font-weight:600;">${c.contactType}</span>`:''}
+        ${c.propStatus?`<span class="prob-badge" style="font-size:10px;">${c.propStatus}</span>`:''}
+      </div>
+    </div>
     <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:7px;">${(c.divisions||[]).map(d=>`<span class="tag ${DC[d]}">${DS[d]}</span>`).join('')}</div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;"><span style="font-size:13px;font-weight:600;">${fmt(c.value)}</span><span style="font-size:11px;color:var(--text2);">${mn(c.assignee)}</span></div>
   </div>`).join('');
@@ -1291,6 +1309,8 @@ function openContactModal(id){
   document.getElementById('cf-inputs').innerHTML='';
   const rel=document.getElementById('cm-related');rel.innerHTML='<option value="">None</option>'+S.contacts.filter(x=>x.id!=id).map(x=>`<option value="${x.id}" ${c?.relatedId==x.id?'selected':''}>${x.name}${x.llc?' / '+x.llc:''}</option>`).join('');
   document.querySelectorAll('.div-cb').forEach(cb=>cb.checked=c?.divisions?.includes(cb.value)||false);
+  // Restore contact type
+  document.querySelectorAll('input[name="cm-type"]').forEach(r=>{r.checked=c?.contactType===r.value;});
   if(c?.divisions?.length)setTimeout(renderCF,50);
   document.getElementById('contact-modal').classList.add('open');
 }
@@ -1301,7 +1321,8 @@ function saveContact(){
   const divisions=[...document.querySelectorAll('.div-cb:checked')].map(cb=>cb.value);
   const notesTxt=document.getElementById('cm-notes').value.trim();
   const stage=document.getElementById('cm-stage').value,assignee=parseInt(document.getElementById('cm-assign').value),customFields=colCF();
-  const data={name,llc:document.getElementById('cm-llc').value.trim(),phone:document.getElementById('cm-phone').value.trim(),email:document.getElementById('cm-email').value.trim(),source:document.getElementById('cm-src').value,ref:document.getElementById('cm-ref').value.trim(),assignee,divisions,stage,value:document.getElementById('cm-value').value,propStatus:document.getElementById('cm-prop').value,relatedId:document.getElementById('cm-related').value||null,customFields,lastActivity:today()};
+  const contactTypeEl=document.querySelector('input[name="cm-type"]:checked');
+  const data={name,llc:document.getElementById('cm-llc').value.trim(),phone:document.getElementById('cm-phone').value.trim(),email:document.getElementById('cm-email').value.trim(),source:document.getElementById('cm-src').value,ref:document.getElementById('cm-ref').value.trim(),assignee,divisions,stage,value:document.getElementById('cm-value').value,propStatus:document.getElementById('cm-prop').value,relatedId:document.getElementById('cm-related').value||null,customFields,contactType:contactTypeEl?contactTypeEl.value:'',lastActivity:today()};
   if(editId){
     const idx=S.contacts.findIndex(x=>x.id==editId);
     if(idx>=0){const old=S.contacts[idx],sc=old.stage!==stage;S.contacts[idx]={...old,...data,notes:[...(old.notes||[]),...(notesTxt?[{text:notesTxt,ts:ts()}]:[])],log:[...(old.log||[]),...(sc?[{msg:`Stage: ${old.stage}→${stage}`,ts:ts(),user:au()}]:[])],stageDate:sc?today():old.stageDate};if(sc&&STAGES.includes(stage))genSeq(editId,stage,assignee);auditL('Contact updated',name+(sc?' stage→'+stage:''));logA(sc?`${name}→${stage}`:`Updated ${name}`,editId);}
@@ -1337,6 +1358,7 @@ function showContact(id){
           <div class="dr"><span>Phone</span><span>${c.phone?`<a href="tel:${c.phone}" style="color:#E8401C;text-decoration:none;">${c.phone}</a>`:'—'}</span></div>
           <div class="dr"><span>Email</span><span>${c.email?`<a href="mailto:${c.email}" style="color:#E8401C;text-decoration:none;">${c.email}</a>`:'—'}</span></div>
           <div class="dr"><span>Source</span><span>${c.source||'—'}${c.ref?' (via '+c.ref+')':''}</span></div>
+          ${c.contactType?`<div class="dr"><span>Contact type</span><span style="font-size:12px;padding:2px 8px;border-radius:99px;background:var(--bg3);color:var(--text2);font-weight:600;">${c.contactType}</span></div>`:''}
           <div class="dr"><span>Assigned to</span><span>${mn(c.assignee)||'—'}</span></div>
           ${rel?`<div class="dr"><span>Related</span><span><a href="#" onclick="showContact(${rel.id});return false;" style="color:#E8401C;text-decoration:none;">${rel.name}</a></span></div>`:''}
           <div class="dr"><span>Estimated project cost</span><span style="font-weight:700;">${fmt(c.value)}</span></div>
@@ -1353,17 +1375,27 @@ function showContact(id){
       </div>`:''}
       ${canEdit()?`<div class="detail-sec"><h4>Move stage</h4><div style="display:flex;gap:5px;flex-wrap:wrap;">${['Contact','Discovery Meeting','Strategy Meeting','Proposal','Planning','Contract','Won','Lost'].map(s=>`<button class="btn btn-sm ${c.stage===s?'btn-primary':''}" onclick="mvStage(${c.id},'${s}')">${s}</button>`).join('')}</div></div>`:''}
         <div class="detail-sec"><h4>Projects (${cD.length})</h4>
-          ${cD.map(d=>`<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <a href="#" onclick="showProject(${d.id});return false;" style="color:#E8401C;text-decoration:none;font-weight:500;">${d.name}</a>
-              <span class="tag ${SC[d.stage]||''}">${d.stage}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-top:2px;">
-              <span>${d.division?DS[d.division]||d.division:''}</span>
-              <span style="font-weight:600;">${d.estimatedCost?'$'+Number(d.estimatedCost).toLocaleString():'—'}</span>
-            </div>
-          </div>`).join('')||'<div style="font-size:13px;color:var(--text2);">No projects</div>'}
-          ${canEdit()?`<button class="btn btn-sm" style="margin-top:8px;" onclick="openProjectModal(${id})">+ Add project</button>`:''}
+          ${cD.map(d=>`
+            <div style="border:1px solid var(--border);border-radius:var(--r);padding:11px;margin-bottom:8px;background:var(--bg);">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+                <a href="#" onclick="showProject(${d.id});return false;" style="color:#E8401C;text-decoration:none;font-weight:600;font-size:13px;flex:1;margin-right:8px;">${d.name}</a>
+                <span class="tag ${SC[d.stage]||''}" style="flex-shrink:0;">${d.stage}</span>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
+                ${d.division?`<span class="tag ${DC[d.division]||''}">${DS[d.division]||d.division}</span>`:''}
+                ${d.exitStrategy?`<span style="font-size:11px;color:var(--text2);">· ${d.exitStrategy}</span>`:''}
+              </div>
+              ${d.address?`<div style="font-size:12px;color:var(--text2);margin-bottom:4px;">📍 ${d.address}</div>`:''}
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">
+                <span style="font-size:13px;font-weight:600;">${d.estimatedCost?'$'+Number(d.estimatedCost).toLocaleString():'No cost estimate'}</span>
+                <div style="display:flex;gap:5px;">
+                  ${canEdit()?`<button class="btn btn-xs" onclick="editProject(${d.id})">Edit</button>`:''}
+                  <button class="btn btn-xs" onclick="showProject(${d.id})">View →</button>
+                </div>
+              </div>
+              ${d.propStatus?`<span class="prob-badge" style="margin-top:5px;display:inline-block;">${d.propStatus}</span>`:''}
+            </div>`).join('')||'<div style="font-size:13px;color:var(--text2);">No projects yet</div>'}
+          ${canEdit()?`<button class="btn btn-sm" style="margin-top:4px;" onclick="openProjectModal(${id})">+ Add project</button>`:''}
         </div>
       </div>
       <div>
@@ -1532,9 +1564,14 @@ function editProject(id){
   setVal('pm-prop',d.propStatus||'');setVal('pm-assign',d.assignee||0);
   setVal('pm-address',d.address||'');setVal('pm-notes',d.notes||'');
   pendDocs=[...(d.docs||[])];renderDocList();
-  renderProjectCF();
-  closeModal('project-detail-modal');
-  document.getElementById('project-modal').classList.add('open');
+  // Close any open modals first
+  document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));
+  setTimeout(()=>{
+    renderProjectCF();
+    // Restore custom fields after renderProjectCF recreates the inputs
+    if(d.customFields)Object.entries(d.customFields).forEach(([k,v])=>{const el=document.getElementById(k);if(el)el.value=v;});
+    document.getElementById('project-modal').classList.add('open');
+  },50);
 }
 
 function delProject(id){
@@ -1635,22 +1672,44 @@ function initGmail(){
         gmailUserEmail=data.emailAddress;
         updateGmailStatus(true);
         showInApp('✅ Gmail connected','Sending as '+gmailUserEmail);
-        // Store token expiry
+        // Store token — keyed by team member index so each person's Gmail persists
         const expiry=Date.now()+(response.expires_in*1000);
-        sessionStorage.setItem('gmail_token',gmailAccessToken);
-        sessionStorage.setItem('gmail_email',gmailUserEmail);
-        sessionStorage.setItem('gmail_expiry',expiry);
+        const userKey='gmail_'+au();
+        localStorage.setItem(userKey+'_token',gmailAccessToken);
+        localStorage.setItem(userKey+'_email',gmailUserEmail);
+        localStorage.setItem(userKey+'_expiry',expiry);
+        // Also store in generic keys for current session
+        localStorage.setItem('gmail_token',gmailAccessToken);
+        localStorage.setItem('gmail_email',gmailUserEmail);
+        localStorage.setItem('gmail_expiry',expiry);
       }).catch(e=>console.error('Profile error:',e));
     }
   });
-  // Restore session token if still valid
-  const storedToken=sessionStorage.getItem('gmail_token');
-  const storedEmail=sessionStorage.getItem('gmail_email');
-  const storedExpiry=sessionStorage.getItem('gmail_expiry');
-  if(storedToken&&storedEmail&&storedExpiry&&Date.now()<parseInt(storedExpiry)){
-    gmailAccessToken=storedToken;
+  // Restore Gmail per team member from localStorage
+  const userKey='gmail_'+au();
+  const storedEmail=localStorage.getItem(userKey+'_email')||localStorage.getItem('gmail_email');
+  const storedToken=localStorage.getItem(userKey+'_token')||localStorage.getItem('gmail_token');
+  const storedExpiry=localStorage.getItem(userKey+'_expiry')||localStorage.getItem('gmail_expiry');
+  if(storedEmail){
     gmailUserEmail=storedEmail;
-    updateGmailStatus(true);
+    // If token is still valid, restore it
+    if(storedToken&&storedExpiry&&Date.now()<parseInt(storedExpiry)){
+      gmailAccessToken=storedToken;
+      updateGmailStatus(true);
+    } else {
+      // Token expired but we know the email — show as connected but needing refresh
+      // Try silent token refresh
+      gmailUserEmail=storedEmail;
+      updateGmailStatus(false);
+      document.getElementById('gmail-label').textContent=storedEmail+' (reconnect)';
+      document.getElementById('gmail-label').style.color='#f0a87a';
+      // Auto-request token silently (no prompt)
+      setTimeout(()=>{
+        if(gmailTokenClient){
+          gmailTokenClient.requestAccessToken({prompt:''});
+        }
+      },2000);
+    }
   }
 }
 
@@ -1737,13 +1796,26 @@ function sendGmail(){
   statusEl.style.color='var(--text2)';
   statusEl.textContent='Sending...';
 
-  // Build RFC 2822 email
-  let email=`From: ${gmailUserEmail}\r\nTo: ${to}\r\n`;
-  if(cc)email+=`Cc: ${cc}\r\n`;
-  email+=`Subject: ${subject}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${body}`;
-
-  // Base64url encode
-  const encodedEmail=btoa(unescape(encodeURIComponent(email))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  // Encode subject using RFC 2047 base64 encoded word (fixes em dashes, special chars)
+  function encodeSubject(str){
+    const bytes=Array.from(new TextEncoder().encode(str)).map(b=>String.fromCharCode(b)).join('');
+    return '=?UTF-8?B?'+btoa(bytes)+'?=';
+  }
+  // Encode body as base64 UTF-8
+  function encodeBody(str){
+    const bytes=Array.from(new TextEncoder().encode(str)).map(b=>String.fromCharCode(b)).join('');
+    return btoa(bytes);
+  }
+  // Build RFC 2822 email with UTF-8 encoded subject and body
+  let emailParts='From: '+gmailUserEmail+'\r\nTo: '+to+'\r\n';
+  if(cc)emailParts+='Cc: '+cc+'\r\n';
+  emailParts+='Subject: '+encodeSubject(subject)+'\r\n';
+  emailParts+='MIME-Version: 1.0\r\n';
+  emailParts+='Content-Type: text/plain; charset=UTF-8\r\n';
+  emailParts+='Content-Transfer-Encoding: base64\r\n\r\n';
+  emailParts+=encodeBody(body);
+  // Base64url encode the whole email
+  const encodedEmail=btoa(Array.from(new TextEncoder().encode(emailParts)).map(b=>String.fromCharCode(b)).join('')).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 
   fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',{
     method:'POST',
@@ -1775,7 +1847,7 @@ function sendGmail(){
           statusEl.textContent='Session expired. Please reconnect Gmail.';
           gmailAccessToken=null;
           updateGmailStatus(false);
-          sessionStorage.removeItem('gmail_token');
+          localStorage.removeItem('gmail_token');
         }else{
           statusEl.textContent='❌ Send failed: '+(err.error?.message||'Unknown error');
         }
