@@ -347,6 +347,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div class="modal-overlay" id="task-modal"><div class="modal">
   <h2>Add task</h2>
   <div class="fg"><label>Task title *</label><input id="tm-title" type="text"></div>
+  <div class="fg"><label>Linked project</label><select id="tm-project" onchange="syncTaskContact(this.value)"><option value="">None</option></select></div>
   <div class="fg"><label>Linked contact</label><select id="tm-contact"><option value="">None</option></select></div>
   <div class="g2"><div class="fg"><label>Assigned to</label><select id="tm-assign"></select></div><div class="fg"><label>Type</label><select id="tm-type"><option>Call</option><option>Email</option><option>Meeting</option><option>Follow-up</option><option>Other</option></select></div></div>
   <div class="fg"><label>Due date</label><input id="tm-due" type="date"></div>
@@ -563,6 +564,7 @@ async function sbLoad(){
       S={...S,...d};
       localStorage.setItem(SK,JSON.stringify(S));
       console.log('✅ Loaded from Supabase');
+      migrateData();
       return true;
     } else {
       console.log('ℹ️ No data in Supabase yet — starting fresh');
@@ -895,9 +897,9 @@ function renderFeed(){const el=document.getElementById('activity-feed');if(!el)r
 function renderRadar(){
   const el=document.getElementById('inactivity-radar');if(!el)return;
   const hot=S.radarDays?.hot||30,warm=S.radarDays?.warm||60;
-  const radarContacts=viewMode==='my'?S.contacts.filter(x=>x.assignee==au()):S.contacts;
-  const list=[...radarContacts].map(c=>({...c,idays:daysDiff(c.lastActivity||c.createdDate||today())})).filter(c=>c.idays>=hot&&!['Won','Lost'].includes(c.stage)).sort((a,b)=>b.idays-a.idays).slice(0,8);
-  el.innerHTML=list.length?list.map(c=>{const cls=c.idays>=warm?'r-hot':'r-warm';return`<div class="radar-row"><div class="av ${avC(c.divisions)}" style="width:28px;height:28px;font-size:10px;">${ini(c.name)}</div><div style="flex:1;"><a href="#" onclick="showContact(${c.id});return false;" style="color:#E8401C;text-decoration:none;font-weight:500;">${c.name}</a><div style="font-size:11px;color:var(--text3);">${(c.divisions||[]).map(d=>DS[d]).join(', ')||'No division'}</div></div><span class="radar-days ${cls}">${c.idays}d</span></div>`;}).join(''):'<div style="font-size:13px;color:var(--text2);">No inactive contacts 🎉</div>';}
+  const radarContacts=viewMode==='my'?(S.projects||[]).filter(p=>p.assignee==au()):(S.projects||[]);
+  const list=[...radarContacts].map(p=>({...p,idays:daysDiff(p.lastActivity||p.createdDate||today())})).filter(p=>p.idays>=hot&&!['Won','Lost'].includes(p.stage)).sort((a,b)=>b.idays-a.idays).slice(0,8);
+  el.innerHTML=list.length?list.map(p=>{const cls=p.idays>=warm?'r-hot':'r-warm';return`<div class="radar-row"><div class="av ${DC[p.division]||'av-x'}" style="width:28px;height:28px;font-size:9px;">${ini(p.name)}</div><div style="flex:1;"><a href="#" onclick="showProject(${p.id});return false;" style="color:#E8401C;text-decoration:none;font-weight:500;">${p.name}</a><div style="font-size:11px;color:var(--text3);">${p.contactName||''} · ${DS[p.division]||p.division||''}</div></div><span class="radar-days ${cls}">${p.idays}d</span></div>`;}).join(''):'<div style="font-size:13px;color:var(--text2);">No inactive projects</div>';}
 function getAging(){const agingSource=viewMode==='my'?S.contacts.filter(x=>x.assignee==au()):S.contacts;
   return agingSource.filter(c=>STAGES.includes(c.stage)).map(c=>({...c,days:daysDiff(c.lastActivity||c.stageDate||c.createdDate||today())})).filter(c=>c.days>=(S.agingDays[c.stage]||14)).sort((a,b)=>b.days-a.days);}
 function updateBadge(){
@@ -1004,13 +1006,14 @@ function renderTasks(){
   const el=document.getElementById('tasks-list');
   if(!list.length){el.innerHTML='<div class="empty">No tasks here.</div>';return;}
   el.innerHTML=list.map(t=>{
+    const lp=t.projectId?(S.projects||[]).find(p=>p.id==t.projectId):null;
     const lc=t.contactId?S.contacts.find(c=>c.id==t.contactId):null;
     let ds='color:var(--text2);';
     if(t.due&&!t.done){if(t.due<tod)ds='color:var(--rd);font-weight:600;';else if(t.due===tod)ds='color:#E8401C;font-weight:600;';}
     return`<div class="task-row">
       <div class="tcb ${t.done?'done':''} ${t.recur?'recur':''}" onclick="togTask(${t.id})" title="${t.recur?'Recurring: '+t.recur:''}">${t.done?'✓':t.recur?'↺':''}</div>
       <div style="flex:1;"><div style="font-size:13px;${t.done?'text-decoration:line-through;color:var(--text2);':''}">${t.title}</div>
-      <div style="font-size:12px;color:var(--text2);margin-top:3px;">${lc?`<a href="#" onclick="showContact(${lc.id});return false;" style="color:#E8401C;text-decoration:none;">${lc.name}</a> · `:''}${t.type||''}${t.recur?' · 🔄 '+t.recur:''} · ${mn(t.assignee)||'unassigned'}</div></div>
+      <div style="font-size:12px;color:var(--text2);margin-top:3px;">${lp?`<a href="#" onclick="showProject(${lp.id});return false;" style="color:#E8401C;text-decoration:none;font-weight:500;">${lp.name}</a> · `:lc?`<a href="#" onclick="showContact(${lc.id});return false;" style="color:#E8401C;text-decoration:none;">${lc.name}</a> · `:''}${t.type||''}${t.recur?' · 🔄 '+t.recur:''} · ${mn(t.assignee)||'unassigned'}</div></div>
       <span style="font-size:12px;white-space:nowrap;${t.done?'color:var(--text2);':ds}">${t.done?'Done':t.due||''}</span>
       <button style="background:none;border:none;cursor:pointer;font-size:16px;padding:2px 5px;" onclick="expTaskICS(${t.id})" title="Add to calendar">📅</button>
       <button class="btn btn-sm btn-danger" onclick="delTask(${t.id})">×</button>
@@ -1328,12 +1331,9 @@ function saveContact(){
     if(idx>=0){const old=S.contacts[idx],sc=old.stage!==stage;S.contacts[idx]={...old,...data,notes:[...(old.notes||[]),...(notesTxt?[{text:notesTxt,ts:ts()}]:[])],log:[...(old.log||[]),...(sc?[{msg:`Stage: ${old.stage}→${stage}`,ts:ts(),user:au()}]:[])],stageDate:sc?today():old.stageDate};if(sc&&STAGES.includes(stage))genSeq(editId,stage,assignee);auditL('Contact updated',name+(sc?' stage→'+stage:''));logA(sc?`${name}→${stage}`:`Updated ${name}`,editId);}
   }else{
     const id=S.nextId++;S.contacts.push({id,...data,notes:notesTxt?[{text:notesTxt,ts:ts()}]:[],log:[{msg:'Contact created',ts:ts(),user:au()}],comms:[],stageDate:today(),createdDate:today()});
-    if(STAGES.includes(stage))genSeq(id,stage,assignee);
-    // Auto-create a project from the contact's initial info
+    // Auto-create a project
     if(!S.projects)S.projects=[];
-    const projName=data.llc?data.llc+' — Initial Project':name+' — Initial Project';
-    S.projects.push({id:S.nextId++,name:projName,contactId:id,contactName:name,llc:data.llc||'',division:(data.divisions&&data.divisions[0])||'',stage,exitStrategy:'',estimatedCost:data.value||'',propStatus:data.propStatus||'',assignee,address:'',customFields:data.customFields||{},docs:[],createdDate:today(),lastActivity:today(),log:[{msg:'Project auto-created from contact',ts:ts(),user:au()}]});
-    auditL('Contact created',name);logA(`Added: ${name}`,id);
+    const firstDiv=(data.divisions&&data.divisions[0])||'';const lastName=name.split(' ').pop();const divMap={'Land Development':'Land Dev','Residential Investment Renovations':'RI Reno','Residential Investment New Construction':'RI New Const','Custom Homes':'Custom Home'};const divShort=divMap[firstDiv]||firstDiv;const projName=firstDiv?lastName+' — '+divShort:name+' — New Project';const projId=S.nextId++;S.projects.push({id:projId,name:projName,contactId:id,contactName:name,llc:data.llc||'',division:firstDiv,stage,exitStrategy:'',estimatedCost:data.value||'',propStatus:data.propStatus||'',assignee,address:'',customFields:data.customFields||{},docs:[],createdDate:today(),lastActivity:today(),log:[{msg:'Project created with contact',ts:ts(),user:au()}]});if(STAGES.includes(stage))genSeq(projId,stage,assignee,id);auditL('Contact created',name);logA('Added: '+name,id);
   }
   saveState();closeModal('contact-modal');renderContacts();renderDB();
 }
@@ -1367,12 +1367,10 @@ function showContact(id){
           <div class="dr"><span>Last activity</span><span style="color:var(--text2);">${c.lastActivity||'—'} (${daysDiff(c.lastActivity)}d ago)</span></div>
         </div>
         ${cfHtml}
-        ${canEdit()?`<div class="detail-sec"><h4>Actions</h4>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
-          <button class="btn btn-sm" style="background:var(--pult);color:var(--pu);border-color:var(--pu);" onclick="showDiscoveryAgenda(${id})">📋 Discovery agenda</button>
-          ${c.email?`<button class="btn btn-sm" style="background:var(--bllt);color:var(--bl);border-color:var(--bl);" onclick="sendQuestionnaire(${id})">📝 Send questionnaire</button>`:''}
-        </div>
-      </div>`:''}
+        <div class="detail-sec"><h4>Active stage</h4>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:8px;">Stage is tracked per project — move stages within each project below.</div>
+        ${c.stageSummary?`<span class="tag ${SC[c.stageSummary]||''}">${c.stageSummary}</span> <span style="font-size:11px;color:var(--text2);">· most active project</span>`:'<span style="font-size:13px;color:var(--text2);">No active projects</span>'}
+      </div>
       ${canEdit()?`<div class="detail-sec"><h4>Move stage</h4><div style="display:flex;gap:5px;flex-wrap:wrap;">${['Contact','Discovery Meeting','Strategy Meeting','Proposal','Planning','Contract','Won','Lost'].map(s=>`<button class="btn btn-sm ${c.stage===s?'btn-primary':''}" onclick="mvStage(${c.id},'${s}')">${s}</button>`).join('')}</div></div>`:''}
         <div class="detail-sec"><h4>Projects (${cD.length})</h4>
           ${cD.map(d=>`
@@ -1442,11 +1440,12 @@ function openCommModal(cid){document.getElementById('comm-cid').value=cid;setVal
 function saveComm(){const cid=parseInt(document.getElementById('comm-cid').value);const c=S.contacts.find(x=>x.id==cid);if(!c)return;if(!c.comms)c.comms=[];const e={type:document.getElementById('comm-type').value,outcome:document.getElementById('comm-out').value,date:document.getElementById('comm-date').value,notes:document.getElementById('comm-notes').value.trim(),user:au(),id:S.nextId++};c.comms.unshift(e);c.lastActivity=today();if(!c.log)c.log=[];c.log.push({msg:`${e.type} — ${e.outcome}`,ts:ts(),user:au()});logA(`${e.type} for ${c.name}`,cid);auditL('Comm logged',`${c.name}: ${e.type}/${e.outcome}`);saveState();closeModal('comm-modal');showContact(cid);}
 
 // ── TASK CRUD ──
-function openTaskModal(cid){if(!canEdit()){alert('Read-only.');return;}rebuildSel();const sel=document.getElementById('tm-contact');sel.innerHTML='<option value="">None</option>'+S.contacts.map(c=>`<option value="${c.id}">${c.name}${c.llc?' / '+c.llc:''}</option>`).join('');if(cid)sel.value=cid;['tm-title','tm-due','tm-notes'].forEach(id=>setVal(id,''));setVal('tm-assign',au());setVal('tm-recur','');document.getElementById('task-modal').classList.add('open');}
-function saveTask(){const title=document.getElementById('tm-title').value.trim();if(!title)return alert('Title required.');const cid=document.getElementById('tm-contact').value||null,due=document.getElementById('tm-due').value||'',recur=document.getElementById('tm-recur').value||'';S.tasks.push({id:S.nextId++,title,contactId:cid,assignee:parseInt(document.getElementById('tm-assign').value),due,type:document.getElementById('tm-type').value,notes:document.getElementById('tm-notes').value.trim(),done:false,recur});const c=cid?S.contacts.find(x=>x.id==cid):null;logA(`Task: ${title}${c?' for '+c.name:''}`,cid);auditL('Task created',title);saveState();closeModal('task-modal');renderTasks();updateBadge();}
-function togTask(id){const t=S.tasks.find(x=>x.id==id);if(!t)return;t.done=!t.done;if(t.done&&t.recur&&RDAYS[t.recur]){const nd=addDays(t.due||today(),RDAYS[t.recur]);S.tasks.push({id:S.nextId++,title:t.title,contactId:t.contactId,assignee:t.assignee,due:nd,type:t.type,notes:t.notes,done:false,recur:t.recur,auto:true});showInApp('Recurring task scheduled',`"${t.title}" next due: ${nd}`);}const c=t.contactId?S.contacts.find(x=>x.id==t.contactId):null;if(c){c.lastActivity=today();if(!c.log)c.log=[];c.log.push({msg:`Task ${t.done?'✓':'reopened'}: ${t.title}`,ts:ts(),user:au()});}logA(`Task ${t.done?'✓':'reopened'}: ${t.title}`,t.contactId);saveState();renderTasks();updateBadge();}
+function openTaskModal(cid,pid){if(!canEdit()){alert('Read-only.');return;}rebuildSel();const psel=document.getElementById('tm-project');psel.innerHTML='<option value="">None</option>'+(S.projects||[]).map(p=>'<option value="'+p.id+'">'+p.name+(p.contactName?' ('+p.contactName+')':'')+'</option>').join('');const csel=document.getElementById('tm-contact');csel.innerHTML='<option value="">None</option>'+S.contacts.map(c=>'<option value="'+c.id+'">'+c.name+(c.llc?' / '+c.llc:'')+'</option>').join('');if(pid){psel.value=pid;syncTaskContact(pid);}else if(cid)csel.value=cid;['tm-title','tm-due','tm-notes'].forEach(id=>setVal(id,''));setVal('tm-assign',au());setVal('tm-recur','');document.getElementById('task-modal').classList.add('open');}
+function syncTaskContact(pid){const p=(S.projects||[]).find(x=>x.id==parseInt(pid));const csel=document.getElementById('tm-contact');csel.innerHTML='<option value="">None</option>'+S.contacts.map(c=>'<option value="'+c.id+'">'+c.name+(c.llc?' / '+c.llc:'')+'</option>').join('');if(p&&p.contactId)csel.value=p.contactId;}
+function saveTask(){const title=document.getElementById('tm-title').value.trim();if(!title)return alert('Title required.');const pid=document.getElementById('tm-project')?.value||null;const cid=document.getElementById('tm-contact').value||null;const p=pid?(S.projects||[]).find(x=>x.id==parseInt(pid)):null;const c=cid?S.contacts.find(x=>x.id==parseInt(cid)):null;S.tasks.push({id:S.nextId++,title,projectId:pid?parseInt(pid):null,contactId:cid?parseInt(cid):(p&&p.contactId?p.contactId:null),assignee:parseInt(document.getElementById('tm-assign').value),due:document.getElementById('tm-due').value||'',type:document.getElementById('tm-type').value,notes:document.getElementById('tm-notes').value.trim(),done:false,recur:document.getElementById('tm-recur').value||''});logA('Task: '+title+(p?' for '+p.name:c?' for '+c.name:''),null);auditL('Task created',title);saveState();closeModal('task-modal');renderTasks();updateBadge();}
+function togTask(id){const t=S.tasks.find(x=>x.id==id);if(!t)return;t.done=!t.done;if(t.done&&t.recur&&RDAYS[t.recur]){const nd=addDays(t.due||today(),RDAYS[t.recur]);S.tasks.push({id:S.nextId++,title:t.title,projectId:t.projectId||null,contactId:t.contactId||null,assignee:t.assignee,due:nd,type:t.type,notes:t.notes,done:false,recur:t.recur,auto:true});showInApp('Recurring task scheduled','"'+t.title+'" next due: '+nd);}const p=t.projectId?(S.projects||[]).find(x=>x.id==t.projectId):null;if(p){p.lastActivity=today();if(!p.log)p.log=[];p.log.push({msg:'Task '+(t.done?'done':'reopened')+': '+t.title,ts:ts(),user:au()});}const c=t.contactId?S.contacts.find(x=>x.id==t.contactId):null;if(c)c.lastActivity=today();logA('Task '+(t.done?'done':'reopened')+': '+t.title,t.contactId||null);saveState();renderTasks();updateBadge();}
 function delTask(id){if(!canEdit()){alert('Read-only access.');return;}if(!confirm('Delete?'))return;S.tasks=S.tasks.filter(t=>t.id!=id);saveState();renderTasks();updateBadge();}
-function genSeq(cid,stage,assignee){const steps=(S.customSeq||SEQ)[stage];if(!steps)return;steps.forEach(s=>S.tasks.push({id:S.nextId++,title:s.title,contactId:cid,assignee:assignee??au(),due:addDays(today(),s.day),type:s.type,notes:s.notes,done:false,auto:true}));}
+function genSeq(projectId,stage,assignee,contactId){const steps=(S.customSeq||SEQ)[stage];if(!steps)return;steps.forEach(s=>S.tasks.push({id:S.nextId++,title:s.title,projectId:projectId||null,contactId:contactId||null,assignee:assignee??au(),due:addDays(today(),s.day),type:s.type,notes:s.notes,done:false,auto:true}));}
 
 // ── DEAL CRUD ──
 let pendDocs=[];
@@ -1496,6 +1495,7 @@ function saveProject(){
 function showProject(id){
   const d=(S.projects||[]).find(x=>x.id==id);if(!d)return;
   const c=d.contactId?S.contacts.find(x=>x.id==d.contactId):null;
+  const rT=S.tasks.filter(t=>t.projectId==id);
   const cfHtml=d.customFields&&Object.keys(d.customFields).length?
     '<div class="detail-sec"><h4>Project details</h4>'+Object.entries(d.customFields).map(([k,v])=>`<div class="dr"><span>${k.replace('pcf-','').replace(/_/g,' ')}</span><span>${v}</span></div>`).join('')+'</div>':'';
   document.getElementById('project-detail-inner').innerHTML=`
@@ -1545,7 +1545,13 @@ function showProject(id){
         </div>
       </div>
     </div>
-    <div style="text-align:right;margin-top:10px;">
+    <div class="detail-sec" style="margin-top:14px;"><h4>Tasks (${rT.length})</h4>
+      ${rT.map(t=>`<div style="display:flex;align-items:center;gap:7px;padding:5px 0;font-size:13px;border-bottom:1px solid var(--border);">${canEdit()?`<div class="tcb ${t.done?'done':''}" onclick="togTask(${t.id});showProject(${d.id});">${t.done?'&#x2713;':''}</div>`:''}<span style="flex:1;${t.done?'text-decoration:line-through;color:var(--text2);':''}">${t.title}</span><span style="font-size:11px;color:var(--text2);">${mn(t.assignee)} · ${t.due||''}</span>${canEdit()?`<button class="btn btn-xs btn-danger" onclick="delTask(${t.id});showProject(${d.id});">×</button>`:''}</div>`).join('')||'<div style="font-size:13px;color:var(--text2);">No tasks yet</div>'}
+      ${canEdit()?`<button class="btn btn-sm" style="margin-top:8px;" onclick="openTaskModal(null,${d.id})">+ Add task</button>`:''}
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap;">
+      ${canEdit()&&c&&c.email?`<button class="btn btn-sm btn-success" onclick="closeModal('project-detail-modal');openGmailCompose(${d.contactId},${d.id});">✉ Send email</button>`:''}
+      ${canEdit()?`<button class="btn btn-sm" style="background:var(--pult);color:var(--pu);border-color:var(--pu);" onclick="showProjectDiscovery(${d.id})">Discovery agenda</button>`:''}
       <button class="btn" onclick="closeModal('project-detail-modal')">Close</button>
     </div>`;
   document.getElementById('project-detail-modal').classList.add('open');
@@ -1586,10 +1592,12 @@ function delProject(id){
 function mvProjectStage(id,stage){
   const d=(S.projects||[]).find(x=>x.id==id);if(!d)return;
   const old=d.stage;d.stage=stage;d.lastActivity=today();
-  if(!d.log)d.log=[];d.log.push({msg:`Stage: ${old}→${stage}`,ts:ts(),user:au()});
+  if(!d.log)d.log=[];d.log.push({msg:'Stage: '+old+'→'+stage,ts:ts(),user:au()});
+  if(STAGES.includes(stage)&&old!==stage){genSeq(d.id,stage,d.assignee,d.contactId);showInApp('Tasks generated','Playbook tasks for '+d.name+' → '+stage);}
+  updateContactStageSummary(d.contactId);
   auditL('Project stage changed',d.name+': '+old+'→'+stage);
-  logA(`Project ${d.name}→${stage}`,d.contactId);
-  saveState();showProject(id);renderProjects();
+  logA('Project '+d.name+'→'+stage,d.contactId);
+  saveState();showProject(id);renderProjects();renderPipeline();
 }
 
 
@@ -1760,8 +1768,9 @@ function gmailSignIn(){
   gmailTokenClient.requestAccessToken({prompt:'consent'});
 }
 
-function openGmailCompose(contactId){
+function openGmailCompose(contactId,projectId){
   gmailComposeContactId=contactId;
+  window._gmailProjectId=projectId||null;
   const c=S.contacts.find(x=>x.id==contactId);
   if(!c)return;
   // Check auth
@@ -1866,6 +1875,7 @@ function sendGmail(){
           c.log.push({msg:'Email sent: '+subject,ts:ts(),user:au()});
           logA('Email sent to '+c.name,gmailComposeContactId);
           auditL('Email sent',c.name+' — '+subject);
+          if(window._gmailProjectId){const eProj=(S.projects||[]).find(pp=>pp.id==window._gmailProjectId);if(eProj){if(!eProj.log)eProj.log=[];eProj.log.push({msg:'Email sent: '+subject,ts:ts(),user:au()});eProj.lastActivity=today();}}
           saveState();
         }
       }
@@ -1891,6 +1901,33 @@ function sendGmail(){
     statusEl.style.color='var(--rd)';
     statusEl.textContent='❌ Network error: '+e.message;
   });
+}
+
+// ── PROJECT DISCOVERY AGENDA ──
+function showProjectDiscovery(pid){
+  const d=(S.projects||[]).find(x=>x.id==pid);if(!d)return;
+  const items=[{q:'Why are we having this call?',k:'why'},{q:'What do you want to build?',k:'build'},{q:'How would you define success?',k:'success'},{q:'What is your ideal exit strategy?',k:'exit'},{q:'How involved do you want to be?',k:'involvement'},{q:'Tell me about past experiences.',k:'exp'},{q:'Project questionnaire sent',k:'questionnaire'},{q:'Strategy meeting scheduled',k:'strategy'}];
+  const sv=d.discoveryAgenda||{};
+  const modal=document.createElement('div');modal.className='modal-overlay open';modal.id='proj-disc-modal';
+  const rows=items.map(it=>{const done=sv[it.k]&&sv[it.k].done;return '<div style="border:1px solid var(--border);border-radius:var(--r);padding:11px;margin-bottom:7px;display:flex;gap:10px;"><div class="tcb '+(done?'done ':'')+' " onclick="togPDA('+pid+',\''+it.k+'\',this)">'+(done?'&#x2713;':'')+'</div><div style="flex:1"><div style="font-size:13px;font-weight:500">'+it.q+'</div><textarea style="width:100%;margin-top:5px;font-size:12px;padding:5px 8px;border-radius:var(--r);border:1px solid var(--border2);resize:vertical;min-height:45px;font-family:inherit" onchange="savePDA('+pid+',\''+it.k+'\',this.value)">'+(sv[it.k]&&sv[it.k].note||'')+'</textarea></div></div>';}).join('');
+  modal.innerHTML='<div class="modal modal-lg"><h2>Discovery Agenda — '+d.name+'</h2>'+rows+'<div class="m-actions"><button class="btn" onclick="document.getElementById(\"proj-disc-modal\").remove();showProject('+pid+')">Close</button></div></div>';
+  document.body.appendChild(modal);
+  modal.addEventListener('click',e=>{if(e.target===modal){modal.remove();showProject(pid);}});
+}
+function togPDA(pid,key,el){
+  const d=(S.projects||[]).find(x=>x.id==parseInt(pid));if(!d)return;
+  if(!d.discoveryAgenda)d.discoveryAgenda={};
+  const done=!(d.discoveryAgenda[key]&&d.discoveryAgenda[key].done);
+  if(!d.discoveryAgenda[key])d.discoveryAgenda[key]={};
+  d.discoveryAgenda[key].done=done;
+  el.className='tcb'+(done?' done':'');el.innerHTML=done?'&#x2713;':'';
+  saveState();
+}
+function savePDA(pid,key,val){
+  const d=(S.projects||[]).find(x=>x.id==parseInt(pid));if(!d)return;
+  if(!d.discoveryAgenda)d.discoveryAgenda={};
+  if(!d.discoveryAgenda[key])d.discoveryAgenda[key]={};
+  d.discoveryAgenda[key].note=val;saveState();
 }
 
 // ── QUESTIONNAIRE SENDER ──
@@ -2000,6 +2037,23 @@ function saveAgendaNote(contactId,key,value){
 
 // ── CLOSE MODALS ──
 document.querySelectorAll('.modal-overlay').forEach(ov=>{ov.addEventListener('click',e=>{if(e.target===ov){ov.classList.remove('open');if(ov.id==='import-modal')resetImp();}});});
+
+// ── DATA MIGRATION ──
+function updateContactStageSummary(contactId){
+  if(!contactId)return;
+  const c=S.contacts.find(x=>x.id==contactId);if(!c)return;
+  const active=(S.projects||[]).filter(p=>p.contactId==contactId&&!['Won','Lost'].includes(p.stage));
+  const priority=['Contract','Planning','Proposal','Strategy Meeting','Discovery Meeting','Contact'];
+  let best='';
+  for(const s of priority){if(active.find(p=>p.stage===s)){best=s;break;}}
+  if(!best){const won=(S.projects||[]).filter(p=>p.contactId==contactId&&p.stage==='Won');best=won.length?'Won':'Lost';}
+  c.stageSummary=best;
+}
+function migrateData(){
+  S.tasks.forEach(t=>{if(!t.projectId&&t.contactId){const proj=(S.projects||[]).find(p=>p.contactId==t.contactId);if(proj)t.projectId=proj.id;}});
+  S.contacts.forEach(c=>updateContactStageSummary(c.id));
+  (S.projects||[]).forEach(p=>{if(!p.log)p.log=[];if(!p.docs)p.docs=[];if(!p.customFields)p.customFields={};if(!p.createdDate)p.createdDate=today();});
+}
 
 // ── INIT ──
 showSyncStatus('Connecting to Benchmark CRM...');
