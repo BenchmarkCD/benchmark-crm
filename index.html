@@ -1177,7 +1177,7 @@ function editPlaybook(stage){
       <button class="btn btn-primary" onclick="savePlaybookEdit()">Save playbook</button>
     </div>
   </div>`;
-  document.body.appendChild(modal);
+  appendModalFront(modal);
   modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});
   renderPlaybookSteps(steps);
 }
@@ -1255,7 +1255,7 @@ function openProposalBuilder(div){
   const sel=document.getElementById('pb-contact');sel.innerHTML='<option value="">Select...</option>'+S.contacts.map(c=>`<option value="${c.id}">${c.name}${c.llc?' / '+c.llc:''}</option>`).join('');
   if(div)document.getElementById('pb-div').value=div;renderPropFields();
   document.getElementById('prop-preview').style.display='none';
-  document.getElementById('prop-modal').classList.add('open');
+  openModalFront('prop-modal');
 }
 function renderPropFields(){
   const div=document.getElementById('pb-div').value;const fields=PF[div]||[];
@@ -1315,7 +1315,7 @@ function openContactModal(id){
   // Restore contact type
   document.querySelectorAll('input[name="cm-type"]').forEach(r=>{r.checked=c?.contactType===r.value;});
   if(c?.divisions?.length)setTimeout(renderCF,50);
-  document.getElementById('contact-modal').classList.add('open');
+  openModalFront('contact-modal');
 }
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 function saveContact(){
@@ -1341,7 +1341,12 @@ function saveContact(){
 // ── CONTACT DETAIL ──
 function showContact(id){
   const c=S.contacts.find(x=>x.id==id);if(!c)return;
-  const rT=S.tasks.filter(t=>t.contactId==id),cD=(S.projects||[]).filter(d=>d.contactId==id),si=STAGES.indexOf(c.stage),rel=c.relatedId?S.contacts.find(x=>x.id==c.relatedId):null;
+  const cD=(S.projects||[]).filter(d=>d.contactId==id),si=STAGES.indexOf(c.stage),rel=c.relatedId?S.contacts.find(x=>x.id==c.relatedId):null;
+  // Deduplicate tasks: collect all tasks for this contact's projects + direct contact tasks, unique by id
+  const projIds=new Set(cD.map(p=>p.id));
+  const taskMap=new Map();
+  S.tasks.filter(t=>t.contactId==id||projIds.has(t.projectId)).forEach(t=>taskMap.set(t.id,t));
+  const rT=[...taskMap.values()];
   let cfHtml='';if(c.customFields&&Object.keys(c.customFields).length){cfHtml=`<div class="detail-sec"><h4>Division details</h4>${Object.entries(c.customFields).map(([k,v])=>`<div class="dr"><span>${k.split('-').pop().replace(/_/g,' ')}</span><span>${v}</span></div>`).join('')}</div>`;}
   const commHtml=(c.comms||[]).length?(c.comms||[]).map(cm=>`<div class="log-entry"><div style="display:flex;justify-content:space-between;"><strong>${cm.type}</strong><span class="tag ts-contact">${cm.outcome}</span></div><div style="color:var(--text2);margin-top:2px;">${cm.notes||''}</div><div class="log-ts">${mn(cm.user)} · ${cm.date||cm.ts}</div></div>`).join(''):'<div style="font-size:13px;color:var(--text2);">No comms yet</div>';
   document.getElementById('detail-inner').innerHTML=`
@@ -1430,17 +1435,18 @@ function showContact(id){
       <button class="btn btn-sm" onclick="expContactICS(${id})">📅 Export tasks to calendar</button>
       <button class="btn" onclick="closeModal('detail-modal')">Close</button>
     </div>`;
-  document.getElementById('detail-modal').classList.add('open');
+  openModalFront('detail-modal');
 }
 function addNote(id){const inp=document.getElementById('nn-'+id);const text=inp.value.trim();if(!text)return;const c=S.contacts.find(x=>x.id==id);if(!c)return;if(!c.notes)c.notes=[];c.notes.push({text,ts:ts()});c.lastActivity=today();if(!c.log)c.log=[];c.log.push({msg:'Note added',ts:ts(),user:au()});logA(`Note on ${c.name}`,id);saveState();showContact(id);}
-function mvStage(id,stage){if(!canEdit()){alert('Read-only.');return;}const c=S.contacts.find(x=>x.id==id);if(!c)return;const old=c.stage;c.stage=stage;c.lastActivity=today();c.stageDate=today();if(!c.log)c.log=[];c.log.push({msg:`Stage: ${old}→${stage}`,ts:ts(),user:au()});if(STAGES.includes(stage)&&old!==stage)genSeq(id,stage,c.assignee);auditL('Stage changed',`${c.name}: ${old}→${stage}`);logA(`${c.name}→${stage}`,id);saveState();showContact(id);renderDB();}
+function mvStage(id,stage){if(!canEdit()){alert('Read-only.');return;}const c=S.contacts.find(x=>x.id==id);if(!c)return;const old=c.stage;c.stage=stage;c.lastActivity=today();c.stageDate=today();if(!c.log)c.log=[];c.log.push({msg:`Stage: ${old}→${stage}`,ts:ts(),user:au()});if(STAGES.includes(stage)&&old!==stage){// Find the contact's primary active project to link tasks correctly
+const proj=(S.projects||[]).find(p=>p.contactId==id&&!['Won','Lost'].includes(p.stage));if(proj){proj.stage=stage;proj.lastActivity=today();if(!proj.log)proj.log=[];proj.log.push({msg:`Stage: ${old}→${stage}`,ts:ts(),user:au()});genSeq(proj.id,stage,c.assignee,id);}else{genSeq(null,stage,c.assignee,id);}}auditL('Stage changed',`${c.name}: ${old}→${stage}`);logA(`${c.name}→${stage}`,id);saveState();showContact(id);renderDB();}
 function delContact(id){if(!canDel()){alert('Admins only.');return;}if(!confirm('Delete this contact and all linked tasks?'))return;const c=S.contacts.find(x=>x.id==id);auditL('Contact deleted',c?.name||id);S.contacts=S.contacts.filter(c=>c.id!=id);S.tasks=S.tasks.filter(t=>t.contactId!=id);logA(`Deleted: ${c?.name}`,null);saveState();closeModal('detail-modal');renderContacts();renderDB();}
 // ── COMM ──
-function openCommModal(cid){document.getElementById('comm-cid').value=cid;setVal('comm-date',today());setVal('comm-notes','');document.getElementById('comm-modal').classList.add('open');}
+function openCommModal(cid){document.getElementById('comm-cid').value=cid;setVal('comm-date',today());setVal('comm-notes','');openModalFront('comm-modal');}
 function saveComm(){const cid=parseInt(document.getElementById('comm-cid').value);const c=S.contacts.find(x=>x.id==cid);if(!c)return;if(!c.comms)c.comms=[];const e={type:document.getElementById('comm-type').value,outcome:document.getElementById('comm-out').value,date:document.getElementById('comm-date').value,notes:document.getElementById('comm-notes').value.trim(),user:au(),id:S.nextId++};c.comms.unshift(e);c.lastActivity=today();if(!c.log)c.log=[];c.log.push({msg:`${e.type} — ${e.outcome}`,ts:ts(),user:au()});logA(`${e.type} for ${c.name}`,cid);auditL('Comm logged',`${c.name}: ${e.type}/${e.outcome}`);saveState();closeModal('comm-modal');showContact(cid);}
 
 // ── TASK CRUD ──
-function openTaskModal(cid,pid){if(!canEdit()){alert('Read-only.');return;}rebuildSel();const psel=document.getElementById('tm-project');psel.innerHTML='<option value="">None</option>'+(S.projects||[]).map(p=>'<option value="'+p.id+'">'+p.name+(p.contactName?' ('+p.contactName+')':'')+'</option>').join('');const csel=document.getElementById('tm-contact');csel.innerHTML='<option value="">None</option>'+S.contacts.map(c=>'<option value="'+c.id+'">'+c.name+(c.llc?' / '+c.llc:'')+'</option>').join('');if(pid){psel.value=pid;syncTaskContact(pid);}else if(cid)csel.value=cid;['tm-title','tm-due','tm-notes'].forEach(id=>setVal(id,''));setVal('tm-assign',au());setVal('tm-recur','');document.getElementById('task-modal').classList.add('open');}
+function openTaskModal(cid,pid){if(!canEdit()){alert('Read-only.');return;}rebuildSel();const psel=document.getElementById('tm-project');psel.innerHTML='<option value="">None</option>'+(S.projects||[]).map(p=>'<option value="'+p.id+'">'+p.name+(p.contactName?' ('+p.contactName+')':'')+'</option>').join('');const csel=document.getElementById('tm-contact');csel.innerHTML='<option value="">None</option>'+S.contacts.map(c=>'<option value="'+c.id+'">'+c.name+(c.llc?' / '+c.llc:'')+'</option>').join('');if(pid){psel.value=pid;syncTaskContact(pid);}else if(cid)csel.value=cid;['tm-title','tm-due','tm-notes'].forEach(id=>setVal(id,''));setVal('tm-assign',au());setVal('tm-recur','');openModalFront('task-modal');}
 function syncTaskContact(pid){const p=(S.projects||[]).find(x=>x.id==parseInt(pid));const csel=document.getElementById('tm-contact');csel.innerHTML='<option value="">None</option>'+S.contacts.map(c=>'<option value="'+c.id+'">'+c.name+(c.llc?' / '+c.llc:'')+'</option>').join('');if(p&&p.contactId)csel.value=p.contactId;}
 function saveTask(){const title=document.getElementById('tm-title').value.trim();if(!title)return alert('Title required.');const pid=document.getElementById('tm-project')?.value||null;const cid=document.getElementById('tm-contact').value||null;const p=pid?(S.projects||[]).find(x=>x.id==parseInt(pid)):null;const c=cid?S.contacts.find(x=>x.id==parseInt(cid)):null;S.tasks.push({id:S.nextId++,title,projectId:pid?parseInt(pid):null,contactId:cid?parseInt(cid):(p&&p.contactId?p.contactId:null),assignee:parseInt(document.getElementById('tm-assign').value),due:document.getElementById('tm-due').value||'',type:document.getElementById('tm-type').value,notes:document.getElementById('tm-notes').value.trim(),done:false,recur:document.getElementById('tm-recur').value||''});logA('Task: '+title+(p?' for '+p.name:c?' for '+c.name:''),null);auditL('Task created',title);saveState();closeModal('task-modal');renderTasks();updateBadge();}
 function togTask(id){const t=S.tasks.find(x=>x.id==id);if(!t)return;t.done=!t.done;if(t.done&&t.recur&&RDAYS[t.recur]){const nd=addDays(t.due||today(),RDAYS[t.recur]);S.tasks.push({id:S.nextId++,title:t.title,projectId:t.projectId||null,contactId:t.contactId||null,assignee:t.assignee,due:nd,type:t.type,notes:t.notes,done:false,recur:t.recur,auto:true});showInApp('Recurring task scheduled','"'+t.title+'" next due: '+nd);}const p=t.projectId?(S.projects||[]).find(x=>x.id==t.projectId):null;if(p){p.lastActivity=today();if(!p.log)p.log=[];p.log.push({msg:'Task '+(t.done?'done':'reopened')+': '+t.title,ts:ts(),user:au()});}const c=t.contactId?S.contacts.find(x=>x.id==t.contactId):null;if(c)c.lastActivity=today();logA('Task '+(t.done?'done':'reopened')+': '+t.title,t.contactId||null);saveState();renderTasks();updateBadge();}
@@ -1449,7 +1455,7 @@ function genSeq(projectId,stage,assignee,contactId){const steps=(S.customSeq||SE
 
 // ── DEAL CRUD ──
 let pendDocs=[];
-function openProjectModal(cid){if(!canEdit()){alert('Read-only.');return;}pendDocs=[];rebuildSel();document.getElementById('pm-title').textContent='Add project';const sel=document.getElementById('pm-contact');sel.innerHTML='<option value="">None</option>'+S.contacts.map(c=>`<option value="${c.id}">${c.name}${c.llc?' / '+c.llc:''}</option>`).join('');if(cid)sel.value=cid;['dm-name','dm-value','dm-notes'].forEach(id=>setVal(id,''));setVal('dm-stage','Contact');setVal('dm-prop','');document.getElementById('pm-docs').innerHTML='';document.getElementById('project-modal').classList.add('open');}
+function openProjectModal(cid){if(!canEdit()){alert('Read-only.');return;}pendDocs=[];rebuildSel();document.getElementById('pm-title').textContent='Add project';const sel=document.getElementById('pm-contact');sel.innerHTML='<option value="">None</option>'+S.contacts.map(c=>`<option value="${c.id}">${c.name}${c.llc?' / '+c.llc:''}</option>`).join('');if(cid)sel.value=cid;['dm-name','dm-value','dm-notes'].forEach(id=>setVal(id,''));setVal('dm-stage','Contact');setVal('dm-prop','');document.getElementById('pm-docs').innerHTML='';window._editProjectId=null;openModalFront('project-modal');}
 function addDoc(){const n=document.getElementById('pm-doc-name').value.trim(),u=document.getElementById('pm-doc-url').value.trim();if(!n||!u){alert('Name and URL required.');return;}pendDocs.push({name:n,url:u,id:S.nextId++});setVal('dm-doc-name','');setVal('dm-doc-url','');renderDocList();}
 function removeDoc(i){pendDocs.splice(i,1);renderDocList();}
 function renderDocList(){document.getElementById('pm-docs').innerHTML=pendDocs.map((d,i)=>'<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:13px;"><a href="'+d.url+'" target="_blank" style="color:#E8401C;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📎 '+d.name+'</a><button class="btn btn-xs btn-danger" onclick="removeDoc('+i+')">×</button></div>').join('');}
@@ -1554,7 +1560,7 @@ function showProject(id){
       ${canEdit()?`<button class="btn btn-sm" style="background:var(--pult);color:var(--pu);border-color:var(--pu);" onclick="showProjectDiscovery(${d.id})">Discovery agenda</button>`:''}
       <button class="btn" onclick="closeModal('project-detail-modal')">Close</button>
     </div>`;
-  document.getElementById('project-detail-modal').classList.add('open');
+  openModalFront('project-detail-modal');
 }
 
 function editProject(id){
@@ -1576,7 +1582,7 @@ function editProject(id){
     renderProjectCF();
     // Restore custom fields after renderProjectCF recreates the inputs
     if(d.customFields)Object.entries(d.customFields).forEach(([k,v])=>{const el=document.getElementById(k);if(el)el.value=v;});
-    document.getElementById('project-modal').classList.add('open');
+    document.getElementById('project-modal').style.zIndex='';openModalFront('project-modal');
   },50);
 }
 
@@ -1612,7 +1618,7 @@ function exportJSON(){const a=document.createElement('a');a.href='data:applicati
 function resetData(){if(!canDel()){alert('Admins only.');return;}if(!confirm('Delete ALL data?'))return;if(!confirm('Cannot be undone. Continue?'))return;S={...S,contacts:[],tasks:[],projects:[],activity:[],auditLog:[],nextId:1};saveState();renderDB();renderContacts();renderTasks();renderProjects();}
 
 // ── TEAM MODAL ──
-function openTeamModal(){const l=document.getElementById('team-edit-list');l.innerHTML='';S.team.forEach((n,i)=>l.appendChild(mkMRow(i,n)));document.getElementById('team-modal').classList.add('open');}
+function openTeamModal(){const l=document.getElementById('team-edit-list');l.innerHTML='';S.team.forEach((n,i)=>l.appendChild(mkMRow(i,n)));openModalFront('team-modal');}
 function mkMRow(i,name){const r=document.createElement('div');r.className='member-row';r.dataset.idx=i;r.innerHTML=`<div class="av av-x" style="width:30px;height:30px;font-size:11px;font-weight:700;">${ini(name)}</div><input type="text" value="${name}" placeholder="Name" style="flex:1;font-size:13px;padding:7px 10px;border-radius:var(--r);border:1px solid var(--border2);" oninput="this.previousElementSibling.textContent=ini(this.value)"><button class="btn btn-sm btn-danger" onclick="rmMRow(this)">× Remove</button>`;return r;}
 function addMemberRow(){document.getElementById('team-edit-list').appendChild(mkMRow(999,''));}
 function rmMRow(btn){const r=btn.closest('.member-row'),idx=parseInt(r.dataset.idx),inUse=S.contacts.some(c=>c.assignee==idx)||S.tasks.some(t=>t.assignee==idx);if(inUse&&!confirm('Has assigned items. Remove anyway?'))return;r.remove();}
@@ -1622,7 +1628,7 @@ function saveTeam(){S.team=[...document.getElementById('team-edit-list').childre
 let csvR=[],csvH=[],impSrc='gs';
 let XLSX_LIB=null;
 function loadXLSX(cb){if(XLSX_LIB){cb();return;}const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=()=>{XLSX_LIB=window.XLSX;cb();};s.onerror=()=>impErr('Excel parser failed. Save as CSV and try again.');document.head.appendChild(s);}
-function openImportModal(){resetImp();document.getElementById('import-modal').classList.add('open');}
+function openImportModal(){resetImp();openModalFront('import-modal');}
 function setImpSrc(src){impSrc=src;['gs','xl','csv'].forEach(s=>{document.getElementById('src-'+s).className='btn btn-sm'+(s===src?' btn-primary':'');document.getElementById('inst-'+s).style.display=s===src?'':'none';});}
 function impErr(m){const e=document.getElementById('imp-err');e.textContent=m;e.style.display='block';}
 function handleImpFile(input){
@@ -1791,7 +1797,7 @@ function openGmailCompose(contactId,projectId){
   document.querySelectorAll('.modal-overlay.open').forEach(m=>{
     if(m.id!=='gmail-modal')m.classList.remove('open');
   });
-  document.getElementById('gmail-modal').classList.add('open');
+  openModalFront('gmail-modal');
 }
 
 function loadDripTemplate(stage,contact){
@@ -1909,9 +1915,9 @@ function showProjectDiscovery(pid){
   const items=[{q:'Why are we having this call?',k:'why'},{q:'What do you want to build?',k:'build'},{q:'How would you define success?',k:'success'},{q:'What is your ideal exit strategy?',k:'exit'},{q:'How involved do you want to be?',k:'involvement'},{q:'Tell me about past experiences.',k:'exp'},{q:'Project questionnaire sent',k:'questionnaire'},{q:'Strategy meeting scheduled',k:'strategy'}];
   const sv=d.discoveryAgenda||{};
   const modal=document.createElement('div');modal.className='modal-overlay open';modal.id='proj-disc-modal';
-  const rows=items.map(it=>{const done=sv[it.k]&&sv[it.k].done;return '<div style="border:1px solid var(--border);border-radius:var(--r);padding:11px;margin-bottom:7px;display:flex;gap:10px;"><div class="tcb '+(done?'done ':'')+' " onclick="togPDA('+pid+',\''+it.k+'\',this)">'+(done?'&#x2713;':'')+'</div><div style="flex:1"><div style="font-size:13px;font-weight:500">'+it.q+'</div><textarea style="width:100%;margin-top:5px;font-size:12px;padding:5px 8px;border-radius:var(--r);border:1px solid var(--border2);resize:vertical;min-height:45px;font-family:inherit" onchange="savePDA('+pid+',\''+it.k+'\',this.value)">'+(sv[it.k]&&sv[it.k].note||'')+'</textarea></div></div>';}).join('');
+  const rows=items.map(it=>{const done=sv[it.k]&&sv[it.k].done;return '<div style="border:1px solid var(--border);border-radius:var(--r);padding:11px;margin-bottom:7px;display:flex;gap:10px;"><div class="tcb '+(done?'done ':'')+' " onclick="togPDA('+pid+',\''+it.k+'\',this)">'+(done?'&#x2713;':'')+'</div><div style="flex:1"><div style="font-size:13px;font-weight:500">'+it.q+'</div><textarea style="width:100%;margin-top:5px;font-size:12px;padding:5px 8px;border-radius:var(--r);border:1px solid var(--border2);resize:vertical;min-height:45px;font-family:inherit" oninput="savePDA('+pid+',\''+it.k+'\',this.value)">'+(sv[it.k]&&sv[it.k].note||'')+'</textarea></div></div>';}).join('');
   modal.innerHTML='<div class="modal modal-lg"><h2>Discovery Agenda — '+d.name+'</h2>'+rows+'<div class="m-actions"><button class="btn" onclick="document.getElementById(\"proj-disc-modal\").remove();showProject('+pid+')">Close</button></div></div>';
-  document.body.appendChild(modal);
+  appendModalFront(modal);
   modal.addEventListener('click',e=>{if(e.target===modal){modal.remove();showProject(pid);}});
 }
 function togPDA(pid,key,el){
@@ -1997,7 +2003,7 @@ function showDiscoveryAgenda(contactId){
             <div class="tcb ${saved[item.key]?.done?'done':''}" onclick="toggleAgendaItem('${contactId}','${item.key}',this)" style="margin-top:2px;flex-shrink:0;">${saved[item.key]?.done?'✓':''}</div>
             <div style="flex:1;">
               <div style="font-size:13px;font-weight:500;${saved[item.key]?.done?'text-decoration:line-through;color:var(--text2);':''}">${item.q}</div>
-              <textarea placeholder="Notes from this item..." style="width:100%;margin-top:6px;font-size:12px;padding:6px 9px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg);color:var(--text);resize:vertical;min-height:50px;font-family:inherit;" onchange="saveAgendaNote('${contactId}','${item.key}',this.value)">${saved[item.key]?.note||''}</textarea>
+              <textarea placeholder="Notes from this item..." style="width:100%;margin-top:6px;font-size:12px;padding:6px 9px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg);color:var(--text);resize:vertical;min-height:50px;font-family:inherit;" oninput="saveAgendaNote('${contactId}','${item.key}',this.value)">${saved[item.key]?.note||''}</textarea>
             </div>
           </div>
         </div>`).join('')}
@@ -2010,7 +2016,7 @@ function showDiscoveryAgenda(contactId){
       <button class="btn" onclick="document.getElementById('discovery-modal').remove()">Close</button>
     </div>
   </div>`;
-  document.body.appendChild(modal);
+  appendModalFront(modal);
   modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});
 }
 
@@ -2034,6 +2040,12 @@ function saveAgendaNote(contactId,key,value){
   c.discoveryAgenda[key].note=value;
   saveState();
 }
+
+// ── MODAL Z-INDEX MANAGER ──
+let _zTop=100;
+function openModalFront(id){const el=document.getElementById(id);if(!el)return;_zTop+=10;el.style.zIndex=_zTop;el.classList.add('open');}
+// Also elevate dynamically created modals (appended to body)
+function appendModalFront(el){_zTop+=10;el.style.zIndex=_zTop;document.body.appendChild(el);}
 
 // ── CLOSE MODALS ──
 document.querySelectorAll('.modal-overlay').forEach(ov=>{ov.addEventListener('click',e=>{if(e.target===ov){ov.classList.remove('open');if(ov.id==='import-modal')resetImp();}});});
