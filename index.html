@@ -753,7 +753,7 @@ function auditL(action,detail){S.auditLog.unshift({action,detail,user:au(),time:
 
 function rebuildSel(){
   const opts=S.team.map((n,i)=>`<option value="${i}">${n}</option>`).join('');
-  ['cm-assign','tm-assign','dm-assign'].forEach(id=>{const el=document.getElementById(id);if(el){const v=el.value;el.innerHTML=opts;if(v)el.value=v;}});
+  ['cm-assign','tm-assign','pm-assign'].forEach(id=>{const el=document.getElementById(id);if(el){const v=el.value;el.innerHTML=opts;if(v)el.value=v;}});
   const aOpts='<option value="">All assignees</option>'+S.team.map((n,i)=>`<option value="${i}">${n}</option>`).join('');
   ['caf','paf','taf'].forEach(id=>{const el=document.getElementById(id);if(el){const v=el.value;el.innerHTML=aOpts;if(v)el.value=v;}});
   const au_el=document.getElementById('active-user');if(au_el){const v=au_el.value;au_el.innerHTML=S.team.map((n,i)=>`<option value="${i}">${n}</option>`).join('');if(v)au_el.value=v;}
@@ -1454,7 +1454,7 @@ function genSeq(projectId,stage,assignee,contactId){const steps=(S.customSeq||SE
 
 // ── DEAL CRUD ──
 let pendDocs=[];
-function openProjectModal(cid){if(!canEdit()){alert('Read-only.');return;}pendDocs=[];rebuildSel();document.getElementById('pm-title').textContent='Add project';const sel=document.getElementById('pm-contact');sel.innerHTML='<option value="">None</option>'+S.contacts.map(c=>`<option value="${c.id}">${c.name}${c.llc?' / '+c.llc:''}</option>`).join('');if(cid)sel.value=cid;['dm-name','dm-value','dm-notes'].forEach(id=>setVal(id,''));setVal('dm-stage','Contact');setVal('dm-prop','');document.getElementById('pm-docs').innerHTML='';window._editProjectId=null;openModalFront('project-modal');}
+function openProjectModal(cid){if(!canEdit()){alert('Read-only.');return;}pendDocs=[];rebuildSel();document.getElementById('pm-title').textContent='Add project';const sel=document.getElementById('pm-contact');sel.innerHTML='<option value="">None</option>'+S.contacts.map(c=>`<option value="${c.id}">${c.name}${c.llc?' / '+c.llc:''}</option>`).join('');if(cid)sel.value=cid;['pm-name','pm-value','pm-notes','pm-address'].forEach(id=>setVal(id,''));setVal('pm-stage','Contact');setVal('pm-prop','');setVal('pm-div','');setVal('pm-exit','');setVal('pm-assign',au());document.getElementById('pm-docs').innerHTML='';document.getElementById('pm-cf-inputs').innerHTML='';window._editProjectId=null;openModalFront('project-modal');}
 function addDoc(){const n=document.getElementById('pm-doc-name').value.trim(),u=document.getElementById('pm-doc-url').value.trim();if(!n||!u){alert('Name and URL required.');return;}pendDocs.push({name:n,url:u,id:S.nextId++});setVal('dm-doc-name','');setVal('dm-doc-url','');renderDocList();}
 function removeDoc(i){pendDocs.splice(i,1);renderDocList();}
 function renderDocList(){document.getElementById('pm-docs').innerHTML=pendDocs.map((d,i)=>'<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:13px;"><a href="'+d.url+'" target="_blank" style="color:#E8401C;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📎 '+d.name+'</a><button class="btn btn-xs btn-danger" onclick="removeDoc('+i+')">×</button></div>').join('');}
