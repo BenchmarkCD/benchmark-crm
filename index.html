@@ -527,7 +527,7 @@ const DRIP=[{stage:'Contact',subject:'Introduction — Benchmark Construction & 
 
 // ── SUPABASE CONFIG ──
 const SB_URL='https://vgmaiwqvnzikyyiittct.supabase.co';
-const SB_KEY='sb_publishable_bcMWQF6-NADFB3_PYrYCrA_c-bUSxlL';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZnbWFpd3F2bnppa3l5aWl0dGN0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MzU5NzIsImV4cCI6MjA5NTMxMTk3Mn0.D_FBbkthgJSmv9_qR_7G_1XSZcYWCTvSw_-Bl2EFUZk';
 
 async function sbFetch(path,method='GET',body=null){
   const opts={method,headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'}};
