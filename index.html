@@ -864,7 +864,7 @@ function renderDB(){
   const myC=viewMode==='my'?c.filter(x=>x.assignee==me):c;
   const myT=viewMode==='my'?S.tasks.filter(t=>t.assignee==me):S.tasks;
   const myProjs=viewMode==='my'?(S.projects||[]).filter(p=>p.assignee==me):(S.projects||[]);
-  const tv=myProjs.reduce((s,x)=>s+(Number(x.estimatedCost)||0),0);
+  const tv=myProjs.filter(x=>x.stage==='Planning').reduce((s,x)=>s+(Number(x.estimatedCost)||0),0);
   const wt=myProjs.filter(x=>!['Won','Lost'].includes(x.stage)).reduce((s,x)=>s+(Number(x.estimatedCost)||0)*((SPROB[x.stage]||0)/100),0);
   const ov=myT.filter(t=>!t.done&&t.due&&t.due<tod).length;
   const mine=myT.filter(t=>!t.done&&t.assignee==me).length;
@@ -876,7 +876,7 @@ function renderDB(){
     </div>
     <div class="stat-card"><div class="stat-lbl">Contacts</div><div class="stat-val">${myC.length}</div><div class="stat-bar" style="width:100%"></div></div>
     <div class="stat-card"><div class="stat-lbl">In Planning</div><div class="stat-val">${myProjs.filter(x=>x.stage==='Planning').length}</div></div>
-    <div class="stat-card"><div class="stat-lbl">Pipeline</div><div class="stat-val" style="font-size:15px;">$${tv.toLocaleString()}</div></div>
+    <div class="stat-card"><div class="stat-lbl">Planning value</div><div class="stat-val" style="font-size:15px;">$${tv.toLocaleString()}</div></div>
     <div class="stat-card"><div class="stat-lbl">Weighted</div><div class="stat-val" style="font-size:14px;color:#E8401C;">$${Math.round(wt).toLocaleString()}</div></div>
     <div class="stat-card"><div class="stat-lbl">Won</div><div class="stat-val" style="color:var(--gn);">${myProjs.filter(x=>x.stage==='Won').length}</div></div>
     <div class="stat-card"><div class="stat-lbl">Lost</div><div class="stat-val" style="color:var(--rd);">${myProjs.filter(x=>x.stage==='Lost').length}</div></div>
