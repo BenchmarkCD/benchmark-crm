@@ -163,6 +163,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   <button onclick="showView('sequences',this)">Playbooks</button>
   <button onclick="showView('drip',this)">Email Drip</button>
   <button onclick="showView('proposals',this)">Proposals</button>
+  <button onclick="showView('broadcast',this)">📢 Broadcast</button>
   <button onclick="showView('team',this)">Team</button>
   <button onclick="showView('settings',this)">Settings</button>
 </div>
@@ -196,7 +197,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <input type="text" id="cs" placeholder="Search name, LLC, email, phone..." oninput="renderContacts()">
     <select id="cdf" onchange="renderContacts()"><option value="">All divisions</option><option>Land Development</option><option>Residential Investment Renovations</option><option>Residential Investment New Construction</option><option>Custom Homes</option></select>
     <select id="csf" onchange="renderContacts()"><option value="">All stages</option><option>Contact</option><option>Discovery Meeting</option><option>Strategy Meeting</option><option>Proposal</option><option>Planning</option><option>Contract</option><option>Won</option><option>Lost</option></select>
-    <select id="ctf" onchange="renderContacts()"><option value="">All types</option><option>Agent</option><option>Investor</option><option>Lender</option><option>Wholesaler</option><option>Other</option></select>
+    <select id="ctf" onchange="renderContacts()"><option value="">All types</option><option>Agent</option><option>Investor</option><option>Lender</option><option>Wholesaler</option><option>Referral Partner</option><option>Homeowner</option><option>Other</option></select>
     <select id="caf" onchange="renderContacts()"><option value="">All assignees</option></select>
     <button class="btn btn-primary" onclick="openContactModal()">+ Add</button>
     <button class="btn btn-success" onclick="openImportModal()">⬆ Import</button>
@@ -219,8 +220,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   <div class="toolbar">
     <select id="pdf" onchange="renderPipeline()"><option value="">All divisions</option><option>Land Development</option><option>Residential Investment Renovations</option><option>Residential Investment New Construction</option><option>Custom Homes</option></select>
     <select id="paf" onchange="renderPipeline()"><option value="">All assignees</option></select>
+    <select id="psort" onchange="renderPipeline()">
+      <option value="stage">Sort: Stage</option>
+      <option value="name">Sort: Name A–Z</option>
+      <option value="value-desc">Sort: Value ↓</option>
+      <option value="value-asc">Sort: Value ↑</option>
+      <option value="activity">Sort: Last Activity</option>
+    </select>
+    <div style="display:flex;gap:4px;border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;">
+      <button id="p-view-board" class="btn btn-sm" style="border:none;border-radius:0;background:#E8401C;color:#fff;" onclick="setPView('board')" title="Board view">⊟</button>
+      <button id="p-view-list" class="btn btn-sm" style="border:none;border-radius:0;" onclick="setPView('list')" title="List view">≡</button>
+    </div>
   </div>
-  <div class="pipe-wrap" id="pipeline-board"></div>
+  <div id="pipeline-board"></div>
 </div>
 
 <!-- Tasks -->
@@ -239,6 +251,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <input type="text" id="proj-s" placeholder="Search projects..." oninput="renderProjects()">
     <select id="proj-sf" onchange="renderProjects()"><option value="">All stages</option><option>Contact</option><option>Discovery Meeting</option><option>Strategy Meeting</option><option>Proposal</option><option>Planning</option><option>Contract</option><option>Won</option><option>Lost</option></select>
     <select id="proj-df" onchange="renderProjects()"><option value="">All divisions</option><option>Land Development</option><option>Residential Investment Renovations</option><option>Residential Investment New Construction</option><option>Custom Homes</option></select>
+    <select id="proj-sort" onchange="renderProjects()">
+      <option value="name">Sort: Name A–Z</option>
+      <option value="stage">Sort: Stage</option>
+      <option value="value-desc">Sort: Value ↓</option>
+      <option value="value-asc">Sort: Value ↑</option>
+      <option value="assignee">Sort: Assignee</option>
+      <option value="activity">Sort: Last Activity</option>
+    </select>
+    <div style="display:flex;gap:4px;border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;">
+      <button id="proj-view-card" class="btn btn-sm" style="border:none;border-radius:0;background:#E8401C;color:#fff;" onclick="setProjView('card')" title="Card view">⊞</button>
+      <button id="proj-view-list" class="btn btn-sm" style="border:none;border-radius:0;" onclick="setProjView('list')" title="List view">≡</button>
+    </div>
     <button class="btn btn-primary" onclick="openProjectModal(null)">+ Add project</button>
   </div>
   <div id="projects-list"></div>
@@ -315,6 +339,66 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   </div>
 </div>
 </div>
+
+<!-- Broadcast -->
+<div id="v-broadcast" class="view">
+  <div style="max-width:860px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+      <div>
+        <h2 style="font-size:16px;font-weight:700;">Send broadcast email</h2>
+        <p style="font-size:13px;color:var(--text2);margin-top:3px;">Compose a message, attach a document, select recipients, and send in one step.</p>
+      </div>
+      <div id="bc-gmail-status" style="font-size:12px;color:var(--text2);padding:5px 10px;border-radius:99px;background:var(--bg3);"></div>
+    </div>
+    <!-- Step 1: Compose -->
+    <div class="card" style="margin-bottom:14px;">
+      <h3 style="font-size:13px;font-weight:700;margin-bottom:12px;">1. Compose</h3>
+      <div class="fg"><label>Subject *</label><input id="bc-subject" type="text" placeholder="e.g. Benchmark Q4 Update"></div>
+      <div class="fg"><label>Message body *</label><textarea id="bc-body" style="min-height:180px;font-family:inherit;line-height:1.65;" placeholder="Write your message here...&#10;&#10;Your email signature will be appended automatically."></textarea></div>
+      <div class="fg">
+        <label>Attach document (optional)</label>
+        <div style="border:2px dashed var(--border2);border-radius:var(--r);padding:16px;text-align:center;cursor:pointer;background:var(--bg2);" onclick="document.getElementById('bc-file-input').click();" id="bc-drop-zone" ondragover="event.preventDefault();this.style.borderColor='#E8401C';" ondragleave="this.style.borderColor='';" ondrop="event.preventDefault();this.style.borderColor='';handleBcFile(event.dataTransfer.files[0]);">
+          <div style="font-size:22px;margin-bottom:4px;">📎</div>
+          <div id="bc-file-label" style="font-size:13px;color:var(--text2);">Click or drag to attach a file (PDF, image, Word doc, etc.)</div>
+          <input type="file" id="bc-file-input" style="display:none;" onchange="handleBcFile(this.files[0])">
+        </div>
+      </div>
+    </div>
+    <!-- Step 2: Recipients -->
+    <div class="card" style="margin-bottom:14px;">
+      <h3 style="font-size:13px;font-weight:700;margin-bottom:12px;">2. Select recipients</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+        <input type="text" id="bc-search" placeholder="Search by name or LLC..." style="font-size:13px;padding:7px 10px;border-radius:var(--r);border:1px solid var(--border2);flex:1;min-width:160px;" oninput="renderBcContacts()">
+        <select id="bc-type-filter" onchange="renderBcContacts()" style="font-size:13px;padding:7px 10px;border-radius:var(--r);border:1px solid var(--border2);">
+          <option value="">All types</option>
+          <option>Agent</option><option>Investor</option><option>Lender</option><option>Wholesaler</option>
+          <option>Referral Partner</option><option>Homeowner</option><option>Other</option>
+        </select>
+        <select id="bc-stage-filter" onchange="renderBcContacts()" style="font-size:13px;padding:7px 10px;border-radius:var(--r);border:1px solid var(--border2);">
+          <option value="">All stages</option>
+          <option>Contact</option><option>Discovery Meeting</option><option>Strategy Meeting</option>
+          <option>Proposal</option><option>Planning</option><option>Contract</option><option>Won</option><option>Lost</option>
+        </select>
+        <button class="btn btn-sm btn-success" onclick="bcSelectAll()">Select all filtered</button>
+        <button class="btn btn-sm" onclick="bcClearAll()">Clear all</button>
+      </div>
+      <div id="bc-contact-list" style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r);"></div>
+      <div style="margin-top:8px;font-size:12px;color:var(--text2);" id="bc-selected-count">0 recipients selected</div>
+    </div>
+    <!-- Step 3: Send -->
+    <div class="card">
+      <h3 style="font-size:13px;font-weight:700;margin-bottom:12px;">3. Send</h3>
+      <div id="bc-preview-list" style="font-size:12px;color:var(--text2);margin-bottom:12px;display:none;"></div>
+      <div id="bc-send-status" style="font-size:13px;margin-bottom:10px;display:none;"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-sm" onclick="bcPreview()">Preview recipient list</button>
+        <button class="btn btn-primary" onclick="sendBroadcast()">📤 Send to all selected</button>
+      </div>
+      <p style="font-size:11px;color:var(--text3);margin-top:8px;">Emails are sent individually so each contact receives a personal email. Only contacts with a valid email address will receive the message.</p>
+    </div>
+  </div>
+</div>
+
 <!-- MODALS -->
 <!-- Contact -->
 <div class="modal-overlay" id="contact-modal"><div class="modal modal-lg">
@@ -327,6 +411,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <label><input type="radio" name="cm-type" value="Investor"> Investor</label>
     <label><input type="radio" name="cm-type" value="Lender"> Lender</label>
     <label><input type="radio" name="cm-type" value="Wholesaler"> Wholesaler</label>
+    <label><input type="radio" name="cm-type" value="Referral Partner"> Referral Partner</label>
+    <label><input type="radio" name="cm-type" value="Homeowner"> Homeowner</label>
     <label><input type="radio" name="cm-type" value="Other"> Other</label>
   </div></div>
   <div class="g2"><div class="fg"><label>Assigned to</label><select id="cm-assign"></select></div><div class="fg"><label>Related contact</label><select id="cm-related"><option value="">None</option></select></div></div>
@@ -568,16 +654,15 @@ async function sbLoad(){
       return true;
     } else {
       console.log('ℹ️ No data in Supabase yet — starting fresh');
-      // Try localStorage as seed
-      try{const r=localStorage.getItem(SK);if(r){const d=JSON.parse(r);S={...S,...d};console.log('📦 Loaded from localStorage cache');}}catch(e){}
+      try{const r=localStorage.getItem(SK);if(r){const d=JSON.parse(r);S={...S,...d};console.log('📦 Loaded from localStorage cache');migrateData();}}catch(e){}
       return true;
     }
   }catch(e){
     console.error('Load error:',e);
-    showSyncStatus('⚠️ Could not connect — using local data');
-    setTimeout(hideSyncStatus,4000);
-    // Fall back to localStorage
-    try{const r=localStorage.getItem(SK);if(r){const d=JSON.parse(r);S={...S,...d};}}catch(ex){}
+    // Fall back to localStorage — app still works offline
+    try{const r=localStorage.getItem(SK);if(r){const d=JSON.parse(r);S={...S,...d};migrateData();console.log('📦 Using localStorage fallback');}}catch(ex){}
+    showSyncStatus('⚠️ Could not reach server — using local data. Changes will sync when reconnected.');
+    setTimeout(hideSyncStatus,6000);
     return false;
   }
 }
@@ -754,7 +839,7 @@ function auditL(action,detail){S.auditLog.unshift({action,detail,user:au(),time:
 
 function rebuildSel(){
   const opts=S.team.map((n,i)=>`<option value="${i}">${n}</option>`).join('');
-  ['cm-assign','tm-assign','dm-assign'].forEach(id=>{const el=document.getElementById(id);if(el){const v=el.value;el.innerHTML=opts;if(v)el.value=v;}});
+  ['cm-assign','tm-assign','pm-assign'].forEach(id=>{const el=document.getElementById(id);if(el){const v=el.value;el.innerHTML=opts;if(v)el.value=v;}});
   const aOpts='<option value="">All assignees</option>'+S.team.map((n,i)=>`<option value="${i}">${n}</option>`).join('');
   ['caf','paf','taf'].forEach(id=>{const el=document.getElementById(id);if(el){const v=el.value;el.innerHTML=aOpts;if(v)el.value=v;}});
   const au_el=document.getElementById('active-user');if(au_el){const v=au_el.value;au_el.innerHTML=S.team.map((n,i)=>`<option value="${i}">${n}</option>`).join('');if(v)au_el.value=v;}
@@ -766,7 +851,7 @@ function showView(v,btn){
   document.querySelectorAll('.nav button').forEach(e=>e.classList.remove('active'));
   document.getElementById('v-'+v).classList.add('active');
   if(btn)btn.classList.add('active');
-  ({dashboard:()=>{renderDB();renderFeed();renderRadar();},contacts:renderContacts,pipeline:renderPipeline,tasks:renderTasks,projects:renderProjects,reports:renderReports,goals:renderGoals,sequences:renderSeq,drip:renderDrip,proposals:renderPropTemplates,team:renderTeam,settings:renderSettings})[v]?.();
+  ({dashboard:()=>{renderDB();renderFeed();renderRadar();},contacts:renderContacts,pipeline:renderPipeline,tasks:renderTasks,projects:renderProjects,reports:renderReports,goals:renderGoals,sequences:renderSeq,drip:renderDrip,proposals:renderPropTemplates,team:renderTeam,settings:renderSettings,broadcast:renderBroadcast})[v]?.();
 }
 function showTab(id,btn){
   document.querySelectorAll('.tab-panel').forEach(e=>e.classList.remove('active'));
@@ -790,7 +875,7 @@ function renderDB(){
       <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;">${viewMode==='my'?(mn(me)+"'s view"):'Company view'}</div>
     </div>
     <div class="stat-card"><div class="stat-lbl">Contacts</div><div class="stat-val">${myC.length}</div><div class="stat-bar" style="width:100%"></div></div>
-    <div class="stat-card"><div class="stat-lbl">Active projects</div><div class="stat-val">${myProjs.filter(x=>!['Won','Lost'].includes(x.stage)).length}</div></div>
+    <div class="stat-card"><div class="stat-lbl">In Planning</div><div class="stat-val">${myProjs.filter(x=>x.stage==='Planning').length}</div></div>
     <div class="stat-card"><div class="stat-lbl">Pipeline</div><div class="stat-val" style="font-size:15px;">$${tv.toLocaleString()}</div></div>
     <div class="stat-card"><div class="stat-lbl">Weighted</div><div class="stat-val" style="font-size:14px;color:#E8401C;">$${Math.round(wt).toLocaleString()}</div></div>
     <div class="stat-card"><div class="stat-lbl">Won</div><div class="stat-val" style="color:var(--gn);">${myProjs.filter(x=>x.stage==='Won').length}</div></div>
@@ -915,29 +1000,71 @@ function updateBadge(){
 
 // ── CONTACTS ──
 let selC=new Set();
+let cView='card';
+function setCView(v){cView=v;const cb=document.getElementById('c-view-card'),lb=document.getElementById('c-view-list');if(cb)cb.style.background=v==='card'?'#E8401C':'';if(cb)cb.style.color=v==='card'?'#fff':'';if(lb)lb.style.background=v==='list'?'#E8401C':'';if(lb)lb.style.color=v==='list'?'#fff':'';renderContacts();}
 function renderContacts(){
   const q=(document.getElementById('cs')||{}).value?.toLowerCase()||'';
   const df=document.getElementById('cdf')?.value||'',sf=document.getElementById('csf')?.value||'',af=document.getElementById('caf')?.value;
   const tf=document.getElementById('ctf')?.value||'';
-  const list=S.contacts.filter(c=>(!q||[c.name,c.llc,c.email,c.phone].some(v=>v?.toLowerCase().includes(q)))&&(!df||(c.divisions&&c.divisions.includes(df)))&&(!sf||c.stage===sf)&&(!tf||c.contactType===tf)&&(af===''||af==null||c.assignee==af)&&myFilter(c.assignee));
+  const sort=document.getElementById('csort')?.value||'name';
+  let list=S.contacts.filter(c=>(!q||[c.name,c.llc,c.email,c.phone].some(v=>v?.toLowerCase().includes(q)))&&(!df||(c.divisions&&c.divisions.includes(df)))&&(!sf||c.stage===sf)&&(!tf||c.contactType===tf)&&(af===''||af==null||c.assignee==af)&&myFilter(c.assignee));
+  const stageOrder={Contact:0,'Discovery Meeting':1,'Strategy Meeting':2,Proposal:3,Planning:4,Contract:5,Won:6,Lost:7};
+  if(sort==='name')list.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  else if(sort==='name-desc')list.sort((a,b)=>(b.name||'').localeCompare(a.name||''));
+  else if(sort==='stage')list.sort((a,b)=>(stageOrder[a.stage]??99)-(stageOrder[b.stage]??99));
+  else if(sort==='type')list.sort((a,b)=>(a.contactType||'').localeCompare(b.contactType||''));
+  else if(sort==='value-desc')list.sort((a,b)=>(Number(b.value)||0)-(Number(a.value)||0));
+  else if(sort==='value-asc')list.sort((a,b)=>(Number(a.value)||0)-(Number(b.value)||0));
+  else if(sort==='assignee')list.sort((a,b)=>(mn(a.assignee)||'').localeCompare(mn(b.assignee)||''));
+  else if(sort==='activity')list.sort((a,b)=>(b.lastActivity||'').localeCompare(a.lastActivity||''));
+  else if(sort==='created')list.sort((a,b)=>(b.createdDate||'').localeCompare(a.createdDate||''));
   const grid=document.getElementById('contacts-grid');
   if(!list.length){grid.innerHTML='<div class="empty">No contacts found.</div>';return;}
-  grid.innerHTML=list.map(c=>`<div class="c-card ${selC.has(c.id)?'selected':''}" onclick="handleCC(event,${c.id})">
-    <input type="checkbox" style="position:absolute;top:10px;right:10px;" ${selC.has(c.id)?'checked':''} onchange="toggleSel(${c.id},this.checked)" onclick="event.stopPropagation()">
-    <div style="display:flex;align-items:center;gap:9px;">
-      <div class="av ${avC(c.divisions)}">${ini(c.name)}</div>
-      <div style="flex:1;min-width:0;padding-right:20px;"><div style="font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.name}</div><div style="font-size:12px;color:var(--text2);">${c.llc||''}</div></div>
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;flex-wrap:wrap;gap:4px;">
-      <span class="tag ${SC[c.stage]}">${c.stage}</span>
-      <div style="display:flex;gap:4px;align-items:center;">
-        ${c.contactType?`<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:var(--bg3);color:var(--text2);font-weight:600;">${c.contactType}</span>`:''}
-        ${c.propStatus?`<span class="prob-badge" style="font-size:10px;">${c.propStatus}</span>`:''}
+  if(cView==='list'){
+    grid.className='';
+    grid.innerHTML=`<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;background:#fff;border-radius:var(--rlg);overflow:hidden;border:1px solid var(--border);">
+      <thead><tr style="background:var(--bg3);text-align:left;">
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Name</th>
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">LLC</th>
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Type</th>
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Stage</th>
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Division</th>
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Value</th>
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Assigned</th>
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Last Activity</th>
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);"></th>
+      </tr></thead>
+      <tbody>${list.map((c,i)=>`<tr style="border-top:1px solid var(--border);cursor:pointer;${i%2===1?'background:var(--bg2);':''}" onmouseenter="this.style.background='var(--orlt)'" onmouseleave="this.style.background='${i%2===1?'var(--bg2)':'#fff'}'">
+        <td style="padding:9px 12px;" onclick="showContact(${c.id})"><div style="font-weight:600;">${c.name}</div></td>
+        <td style="padding:9px 12px;color:var(--text2);" onclick="showContact(${c.id})">${c.llc||'—'}</td>
+        <td style="padding:9px 12px;" onclick="showContact(${c.id})">${c.contactType?`<span style="font-size:11px;padding:2px 7px;border-radius:99px;background:var(--bg3);color:var(--text2);font-weight:600;">${c.contactType}</span>`:'—'}</td>
+        <td style="padding:9px 12px;" onclick="showContact(${c.id})"><span class="tag ${SC[c.stage]||''}">${c.stage}</span></td>
+        <td style="padding:9px 12px;" onclick="showContact(${c.id})">${(c.divisions||[]).map(d=>`<span class="tag ${DC[d]}" style="margin-right:2px;">${DS[d]}</span>`).join('')||'—'}</td>
+        <td style="padding:9px 12px;font-weight:600;" onclick="showContact(${c.id})">${fmt(c.value)}</td>
+        <td style="padding:9px 12px;color:var(--text2);" onclick="showContact(${c.id})">${mn(c.assignee)||'—'}</td>
+        <td style="padding:9px 12px;color:var(--text2);font-size:12px;" onclick="showContact(${c.id})">${c.lastActivity||'—'}</td>
+        <td style="padding:9px 12px;"><input type="checkbox" ${selC.has(c.id)?'checked':''} onchange="toggleSel(${c.id},this.checked)"></td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  } else {
+    grid.className='c-grid';
+    grid.innerHTML=list.map(c=>`<div class="c-card ${selC.has(c.id)?'selected':''}" onclick="handleCC(event,${c.id})">
+      <input type="checkbox" style="position:absolute;top:10px;right:10px;" ${selC.has(c.id)?'checked':''} onchange="toggleSel(${c.id},this.checked)" onclick="event.stopPropagation()">
+      <div style="display:flex;align-items:center;gap:9px;">
+        <div class="av ${avC(c.divisions)}">${ini(c.name)}</div>
+        <div style="flex:1;min-width:0;padding-right:20px;"><div style="font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.name}</div><div style="font-size:12px;color:var(--text2);">${c.llc||''}</div></div>
       </div>
-    </div>
-    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:7px;">${(c.divisions||[]).map(d=>`<span class="tag ${DC[d]}">${DS[d]}</span>`).join('')}</div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;"><span style="font-size:13px;font-weight:600;">${fmt(c.value)}</span><span style="font-size:11px;color:var(--text2);">${mn(c.assignee)}</span></div>
-  </div>`).join('');
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;flex-wrap:wrap;gap:4px;">
+        <span class="tag ${SC[c.stage]}">${c.stage}</span>
+        <div style="display:flex;gap:4px;align-items:center;">
+          ${c.contactType?`<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:var(--bg3);color:var(--text2);font-weight:600;">${c.contactType}</span>`:''}
+          ${c.propStatus?`<span class="prob-badge" style="font-size:10px;">${c.propStatus}</span>`:''}
+        </div>
+      </div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:7px;">${(c.divisions||[]).map(d=>`<span class="tag ${DC[d]}">${DS[d]}</span>`).join('')}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;"><span style="font-size:13px;font-weight:600;">${fmt(c.value)}</span><span style="font-size:11px;color:var(--text2);">${mn(c.assignee)}</span></div>
+    </div>`).join('');
+  }
   updBulk();
 }
 function handleCC(e,id){if(e.target.type==='checkbox')return;showContact(id);}
@@ -967,28 +1094,63 @@ function renderCF(){
 function colCF(){const obj={};document.querySelectorAll('#cf-inputs input').forEach(i=>{if(i.value.trim())obj[i.id]=i.value.trim();});return obj;}
 
 // ── PIPELINE ──
+let pView='board';
+function setPView(v){pView=v;const bb=document.getElementById('p-view-board'),lb=document.getElementById('p-view-list');if(bb){bb.style.background=v==='board'?'#E8401C':'';bb.style.color=v==='board'?'#fff':'';}if(lb){lb.style.background=v==='list'?'#E8401C':'';lb.style.color=v==='list'?'#fff':'';}renderPipeline();}
 function renderPipeline(){
   const df=document.getElementById('pdf')?.value||'',af=document.getElementById('paf')?.value;
+  const sort=document.getElementById('psort')?.value||'stage';
   const allStages=['Contact','Discovery Meeting','Strategy Meeting','Proposal','Planning','Contract','Won','Lost'];
   const scls={Contact:'sc','Discovery Meeting':'sd','Strategy Meeting':'ss',Proposal:'sp',Planning:'spl',Contract:'sct',Won:'sp',Lost:'sc'};
-  const projects=S.projects||[];
-  document.getElementById('pipeline-board').innerHTML=allStages.map(s=>{
-    const items=projects.filter(p=>p.stage===s&&(!df||p.division===df)&&(af===''||af==null||p.assignee==af)&&myFilter(p.assignee));
-    const tot=items.reduce((sum,p)=>sum+(Number(p.estimatedCost)||0),0);
-    return`<div class="pipe-col"><div class="pipe-hdr ${scls[s]||'sc'}"><span>${s} (${items.length})</span><span class="prob-badge">${SPROB[s]||0}%</span></div>
-      ${items.map(p=>`<div class="pipe-item" onclick="showProject(${p.id})">
-        <div style="font-weight:600;font-size:13px;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</div>
-        ${p.contactName?`<div style="font-size:11px;color:var(--text2);margin-bottom:3px;">👤 ${p.contactName}${p.llc?' / '+p.llc:''}</div>`:''}
-        ${p.division?`<span class="tag ${DC[p.division]||''}" style="font-size:10px;">${DS[p.division]||p.division}</span>`:''}
-        ${p.propStatus?`<span class="prob-badge" style="font-size:10px;margin-left:3px;">${p.propStatus}</span>`:''}
-        <div style="font-size:12px;color:var(--text2);margin-top:5px;display:flex;justify-content:space-between;">
-          <span>${p.estimatedCost?'$'+Number(p.estimatedCost).toLocaleString():'—'}</span>
-          <span>${mn(p.assignee)}</span>
-        </div>
-      </div>`).join('')||'<div style="font-size:12px;color:var(--text2);padding:5px 0;">—</div>'}
-      ${tot>0?`<div style="font-size:12px;font-weight:600;color:var(--text2);margin-top:5px;text-align:right;border-top:1px solid var(--border);padding-top:5px;">$${tot.toLocaleString()}</div>`:''}
-    </div>`;
-  }).join('');
+  const stageOrder={Contact:0,'Discovery Meeting':1,'Strategy Meeting':2,Proposal:3,Planning:4,Contract:5,Won:6,Lost:7};
+  let projects=(S.projects||[]).filter(p=>(!df||p.division===df)&&(af===''||af==null||p.assignee==af)&&myFilter(p.assignee));
+  const el=document.getElementById('pipeline-board');
+  if(pView==='list'){
+    if(sort==='name')projects.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    else if(sort==='value-desc')projects.sort((a,b)=>(Number(b.estimatedCost)||0)-(Number(a.estimatedCost)||0));
+    else if(sort==='value-asc')projects.sort((a,b)=>(Number(a.estimatedCost)||0)-(Number(b.estimatedCost)||0));
+    else if(sort==='activity')projects.sort((a,b)=>(b.lastActivity||'').localeCompare(a.lastActivity||''));
+    else projects.sort((a,b)=>(stageOrder[a.stage]??99)-(stageOrder[b.stage]??99));
+    el.className='';
+    el.innerHTML=projects.length?`<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;background:#fff;border-radius:var(--rlg);overflow:hidden;border:1px solid var(--border);">
+      <thead><tr style="background:var(--bg3);text-align:left;">
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Project</th>
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Contact</th>
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Stage</th>
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Division</th>
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Value</th>
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Assigned</th>
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Last Activity</th>
+      </tr></thead>
+      <tbody>${projects.map((p,i)=>`<tr style="border-top:1px solid var(--border);cursor:pointer;${i%2===1?'background:var(--bg2);':''}" onclick="showProject(${p.id})" onmouseenter="this.style.background='var(--orlt)'" onmouseleave="this.style.background='${i%2===1?'var(--bg2)':'#fff'}'">
+        <td style="padding:9px 12px;font-weight:600;">${p.name}</td>
+        <td style="padding:9px 12px;color:var(--text2);">${p.contactName||'—'}${p.llc?' / '+p.llc:''}</td>
+        <td style="padding:9px 12px;"><span class="tag ${scls[p.stage]||'sc'}">${p.stage}</span></td>
+        <td style="padding:9px 12px;">${p.division?`<span class="tag ${DC[p.division]||''}">${DS[p.division]||p.division}</span>`:'—'}</td>
+        <td style="padding:9px 12px;font-weight:600;">${p.estimatedCost?'$'+Number(p.estimatedCost).toLocaleString():'—'}</td>
+        <td style="padding:9px 12px;color:var(--text2);">${mn(p.assignee)||'—'}</td>
+        <td style="padding:9px 12px;color:var(--text2);font-size:12px;">${p.lastActivity||'—'}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`:'<div class="empty">No projects match filters.</div>';
+  } else {
+    el.className='pipe-wrap';
+    el.innerHTML=allStages.map(s=>{
+      const items=projects.filter(p=>p.stage===s);
+      const tot=items.reduce((sum,p)=>sum+(Number(p.estimatedCost)||0),0);
+      return`<div class="pipe-col"><div class="pipe-hdr ${scls[s]||'sc'}"><span>${s} (${items.length})</span><span class="prob-badge">${SPROB[s]||0}%</span></div>
+        ${items.map(p=>`<div class="pipe-item" onclick="showProject(${p.id})">
+          <div style="font-weight:600;font-size:13px;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</div>
+          ${p.contactName?`<div style="font-size:11px;color:var(--text2);margin-bottom:3px;">👤 ${p.contactName}${p.llc?' / '+p.llc:''}</div>`:''}
+          ${p.division?`<span class="tag ${DC[p.division]||''}" style="font-size:10px;">${DS[p.division]||p.division}</span>`:''}
+          ${p.propStatus?`<span class="prob-badge" style="font-size:10px;margin-left:3px;">${p.propStatus}</span>`:''}
+          <div style="font-size:12px;color:var(--text2);margin-top:5px;display:flex;justify-content:space-between;">
+            <span>${p.estimatedCost?'$'+Number(p.estimatedCost).toLocaleString():'—'}</span>
+            <span>${mn(p.assignee)}</span>
+          </div>
+        </div>`).join('')||'<div style="font-size:12px;color:var(--text2);padding:5px 0;">—</div>'}
+        ${tot>0?`<div style="font-size:12px;font-weight:600;color:var(--text2);margin-top:5px;text-align:right;border-top:1px solid var(--border);padding-top:5px;">$${tot.toLocaleString()}</div>`:''}
+      </div>`;
+    }).join('');
+  }
 }
 
 // ── TASKS ──
@@ -1023,38 +1185,66 @@ function renderTasks(){
   updateBadge();
 }
 // ── DEALS ──
+let projView='card';
+function setProjView(v){projView=v;const cb=document.getElementById('proj-view-card'),lb=document.getElementById('proj-view-list');if(cb){cb.style.background=v==='card'?'#E8401C':'';cb.style.color=v==='card'?'#fff':'';}if(lb){lb.style.background=v==='list'?'#E8401C':'';lb.style.color=v==='list'?'#fff':'';}renderProjects();}
 function renderProjects(){
   const q=document.getElementById('proj-s')?.value?.toLowerCase()||'';
   const sf=document.getElementById('proj-sf')?.value||'';
   const df=document.getElementById('proj-df')?.value||'';
-  const list=(S.projects||[]).filter(d=>
+  const sort=document.getElementById('proj-sort')?.value||'name';
+  const stageOrder={Contact:0,'Discovery Meeting':1,'Strategy Meeting':2,Proposal:3,Planning:4,Contract:5,Won:6,Lost:7};
+  let list=(S.projects||[]).filter(d=>
     (!q||d.name?.toLowerCase().includes(q)||d.contactName?.toLowerCase().includes(q)||d.llc?.toLowerCase().includes(q))
-    &&(!sf||d.stage===sf)
-    &&(!df||d.division===df)
-    &&myFilter(d.assignee)
+    &&(!sf||d.stage===sf)&&(!df||d.division===df)&&myFilter(d.assignee)
   );
+  if(sort==='name')list.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  else if(sort==='stage')list.sort((a,b)=>(stageOrder[a.stage]??99)-(stageOrder[b.stage]??99));
+  else if(sort==='value-desc')list.sort((a,b)=>(Number(b.estimatedCost)||0)-(Number(a.estimatedCost)||0));
+  else if(sort==='value-asc')list.sort((a,b)=>(Number(a.estimatedCost)||0)-(Number(b.estimatedCost)||0));
+  else if(sort==='assignee')list.sort((a,b)=>(mn(a.assignee)||'').localeCompare(mn(b.assignee)||''));
+  else if(sort==='activity')list.sort((a,b)=>(b.lastActivity||'').localeCompare(a.lastActivity||''));
   const el=document.getElementById('projects-list');
   if(!list.length){el.innerHTML='<div class="empty">No projects yet.<br><span style="font-size:13px;color:var(--text3);">Projects are created automatically when a contact is saved, or add one manually.</span></div>';return;}
-  el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:11px;">${list.map(d=>`
-    <div class="card" style="cursor:pointer;" onclick="showProject(${d.id})">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
-        <div style="font-weight:600;font-size:14px;flex:1;margin-right:8px;">${d.name}</div>
-        <span class="tag ${SC[d.stage]||''}">${d.stage}</span>
-      </div>
-      ${d.contactName?`<div style="font-size:12px;color:var(--text2);margin-bottom:5px;">👤 ${d.contactName}${d.llc?' / '+d.llc:''}</div>`:''}
-      ${d.division?`<div style="margin-bottom:6px;"><span class="tag ${DC[d.division]||''}">${DS[d.division]||d.division}</span>${d.exitStrategy?`<span style="font-size:12px;color:var(--text2);margin-left:6px;">· ${d.exitStrategy}</span>`:''}</div>`:''}
-      ${d.address?`<div style="font-size:12px;color:var(--text2);margin-bottom:5px;">📍 ${d.address}</div>`:''}
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
-        <div>
-          ${d.estimatedCost?`<div style="font-size:13px;font-weight:600;">$${Number(d.estimatedCost).toLocaleString()}</div><div style="font-size:10px;color:var(--text3);">Est. project cost</div>`:'<div style="font-size:12px;color:var(--text3);">No cost estimate</div>'}
+  if(projView==='list'){
+    el.innerHTML=`<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;background:#fff;border-radius:var(--rlg);overflow:hidden;border:1px solid var(--border);">
+      <thead><tr style="background:var(--bg3);text-align:left;">
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Project</th>
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Contact</th>
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Stage</th>
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Division</th>
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Address</th>
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Value</th>
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Assigned</th>
+        <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Last Activity</th>
+      </tr></thead>
+      <tbody>${list.map((d,i)=>`<tr style="border-top:1px solid var(--border);cursor:pointer;${i%2===1?'background:var(--bg2);':''}" onclick="showProject(${d.id})" onmouseenter="this.style.background='var(--orlt)'" onmouseleave="this.style.background='${i%2===1?'var(--bg2)':'#fff'}'">
+        <td style="padding:9px 12px;font-weight:600;">${d.name}</td>
+        <td style="padding:9px 12px;color:var(--text2);">${d.contactName||'—'}${d.llc?' / '+d.llc:''}</td>
+        <td style="padding:9px 12px;"><span class="tag ${SC[d.stage]||''}">${d.stage}</span></td>
+        <td style="padding:9px 12px;">${d.division?`<span class="tag ${DC[d.division]||''}">${DS[d.division]||d.division}</span>`:'—'}</td>
+        <td style="padding:9px 12px;color:var(--text2);font-size:12px;">${d.address||'—'}</td>
+        <td style="padding:9px 12px;font-weight:600;">${d.estimatedCost?'$'+Number(d.estimatedCost).toLocaleString():'—'}</td>
+        <td style="padding:9px 12px;color:var(--text2);">${mn(d.assignee)||'—'}</td>
+        <td style="padding:9px 12px;color:var(--text2);font-size:12px;">${d.lastActivity||'—'}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  } else {
+    el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:11px;">${list.map(d=>`
+      <div class="card" style="cursor:pointer;" onclick="showProject(${d.id})">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+          <div style="font-weight:600;font-size:14px;flex:1;margin-right:8px;">${d.name}</div>
+          <span class="tag ${SC[d.stage]||''}">${d.stage}</span>
         </div>
-        <div style="text-align:right;">
-          ${d.propStatus?`<span class="prob-badge" style="display:block;margin-bottom:3px;">${d.propStatus}</span>`:''}
-          <span style="font-size:11px;color:var(--text2);">${mn(d.assignee)}</span>
+        ${d.contactName?`<div style="font-size:12px;color:var(--text2);margin-bottom:5px;">👤 ${d.contactName}${d.llc?' / '+d.llc:''}</div>`:''}
+        ${d.division?`<div style="margin-bottom:6px;"><span class="tag ${DC[d.division]||''}">${DS[d.division]||d.division}</span>${d.exitStrategy?`<span style="font-size:12px;color:var(--text2);margin-left:6px;">· ${d.exitStrategy}</span>`:''}</div>`:''}
+        ${d.address?`<div style="font-size:12px;color:var(--text2);margin-bottom:5px;">📍 ${d.address}</div>`:''}
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+          <div>${d.estimatedCost?`<div style="font-size:13px;font-weight:600;">$${Number(d.estimatedCost).toLocaleString()}</div><div style="font-size:10px;color:var(--text3);">Est. project cost</div>`:'<div style="font-size:12px;color:var(--text3);">No cost estimate</div>'}</div>
+          <div style="text-align:right;">${d.propStatus?`<span class="prob-badge" style="display:block;margin-bottom:3px;">${d.propStatus}</span>`:''}<span style="font-size:11px;color:var(--text2);">${mn(d.assignee)}</span></div>
         </div>
-      </div>
-      ${(d.docs||[]).length?`<div style="font-size:12px;color:var(--bl);margin-top:6px;">📎 ${d.docs.length} doc${d.docs.length>1?'s':''}</div>`:''}
-    </div>`).join('')}</div>`;
+        ${(d.docs||[]).length?`<div style="font-size:12px;color:var(--bl);margin-top:6px;">📎 ${d.docs.length} doc${d.docs.length>1?'s':''}</div>`:''}
+      </div>`).join('')}</div>`;
+  }
 }
 
 
@@ -1116,9 +1306,9 @@ function renderGoals(){
   const divs=['Land Development','Residential Investment Renovations','Residential Investment New Construction','Custom Homes'];
   document.getElementById('goals-content').innerHTML=`<div class="g2" style="margin-bottom:14px;">
     <div class="card"><h3 style="font-size:13px;font-weight:600;margin-bottom:12px;">Company targets</h3>
-      <div class="fg"><label>Monthly ($)</label><input id="g-mo" type="number" value="${g.monthly||0}"></div>
-      <div class="fg"><label>Quarterly ($)</label><input id="g-q" type="number" value="${g.quarterly||0}"></div>
-      <div class="fg"><label>Annual ($)</label><input id="g-an" type="number" value="${g.annual||0}"></div>
+      <div class="fg"><label>Monthly</label><div style="position:relative;"><span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text2);font-size:13px;">$</span><input id="g-mo" type="text" inputmode="numeric" value="${g.monthly?Number(g.monthly).toLocaleString():''}" placeholder="0" style="padding-left:22px;" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/\B(?=(\d{3})+(?!\d))/g,',')"></div></div>
+      <div class="fg"><label>Quarterly</label><div style="position:relative;"><span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text2);font-size:13px;">$</span><input id="g-q" type="text" inputmode="numeric" value="${g.quarterly?Number(g.quarterly).toLocaleString():''}" placeholder="0" style="padding-left:22px;" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/\B(?=(\d{3})+(?!\d))/g,',')"></div></div>
+      <div class="fg"><label>Annual</label><div style="position:relative;"><span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text2);font-size:13px;">$</span><input id="g-an" type="text" inputmode="numeric" value="${g.annual?Number(g.annual).toLocaleString():''}" placeholder="0" style="padding-left:22px;" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/\B(?=(\d{3})+(?!\d))/g,',')"></div></div>
     </div>
     <div class="card"><h3 style="font-size:13px;font-weight:600;margin-bottom:12px;">Progress · Won: $${wonV.toLocaleString()} · Pipeline: $${pipe.toLocaleString()}</h3>
       ${[['Monthly',(g.monthly||0)],['Quarterly',(g.quarterly||0)],['Annual',(g.annual||0)]].map(([lbl,tgt])=>{const pct=tgt>0?Math.min(100,Math.round(wonV/tgt*100)):0;return`<div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>${lbl}</span><span style="font-weight:600;">${pct}% <span style="color:var(--text2);font-weight:400;">${tgt>0?'of $'+Number(tgt).toLocaleString():'no target'}</span></span></div><div class="goal-bar"><div class="goal-fill" style="width:${pct}%;background:${pct>=100?'var(--gn)':'#E8401C'};"></div></div></div>`;}).join('')}
@@ -1134,7 +1324,7 @@ function renderGoals(){
   </div>`;
 }
 function saveGoals(){
-  S.goals.monthly=parseFloat(document.getElementById('g-mo')?.value)||0;S.goals.quarterly=parseFloat(document.getElementById('g-q')?.value)||0;S.goals.annual=parseFloat(document.getElementById('g-an')?.value)||0;
+  const gv=id=>{const el=document.getElementById(id);return el?parseFloat(el.value.replace(/,/g,''))||0:0;};S.goals.monthly=gv('g-mo');S.goals.quarterly=gv('g-q');S.goals.annual=gv('g-an');
   if(!S.goals.byMember)S.goals.byMember={};S.team.forEach((_,i)=>{const el=document.getElementById('gm-'+i);if(el)S.goals.byMember[i]=parseFloat(el.value)||0;});
   if(!S.goals.byDivision)S.goals.byDivision={};['Land Development','Residential Investment Renovations','Residential Investment New Construction','Custom Homes'].forEach(d=>{const el=document.getElementById('gd-'+d.replace(/\s/g,'_'));if(el)S.goals.byDivision[d]=parseFloat(el.value)||0;});
   saveState();renderGoals();renderDB();auditL('Goals updated','Revenue targets saved');alert('Goals saved!');
@@ -1451,9 +1641,9 @@ function genSeq(projectId,stage,assignee,contactId){const steps=(S.customSeq||SE
 // ── DEAL CRUD ──
 let pendDocs=[];
 function openProjectModal(cid){if(!canEdit()){alert('Read-only.');return;}pendDocs=[];rebuildSel();document.getElementById('pm-title').textContent='Add project';const sel=document.getElementById('pm-contact');sel.innerHTML='<option value="">None</option>'+S.contacts.map(c=>`<option value="${c.id}">${c.name}${c.llc?' / '+c.llc:''}</option>`).join('');if(cid)sel.value=cid;['pm-name','pm-value','pm-notes','pm-address'].forEach(id=>setVal(id,''));setVal('pm-stage','Contact');setVal('pm-prop','');setVal('pm-div','');setVal('pm-exit','');setVal('pm-assign',au());document.getElementById('pm-docs').innerHTML='';document.getElementById('pm-cf-inputs').innerHTML='';window._editProjectId=null;openModalFront('project-modal');}
-function addDoc(){const n=document.getElementById('pm-doc-name').value.trim(),u=document.getElementById('pm-doc-url').value.trim();if(!n||!u){alert('Name and URL required.');return;}pendDocs.push({name:n,url:u,id:S.nextId++});setVal('pm-doc-name','');setVal('pm-doc-url','');renderDocList();}
 function renderProjectCF(){const div=document.getElementById('pm-div').value;const fields=CF[div]||[];const el=document.getElementById('pm-cf-inputs');if(!el)return;el.innerHTML=fields.length?'<div style="background:var(--bg2);border-radius:var(--r);padding:12px;margin-bottom:12px;"><div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;margin-bottom:8px;">'+(DS[div]||div)+' details</div><div class="g2">'+fields.map(f=>'<div class="fg" style="margin:0;"><label style="font-size:11px;">'+f+'</label><input id="pcf-'+f.replace(/[^a-z0-9]/gi,'_')+'" type="text"></div>').join('')+'</div></div>':'';}
 function colProjectCF(){const obj={};document.querySelectorAll('#pm-cf-inputs input').forEach(i=>{if(i.value.trim())obj[i.id]=i.value.trim();});return obj;}
+function addDoc(){const n=document.getElementById('pm-doc-name').value.trim(),u=document.getElementById('pm-doc-url').value.trim();if(!n||!u){alert('Name and URL required.');return;}pendDocs.push({name:n,url:u,id:S.nextId++});setVal('pm-doc-name','');setVal('pm-doc-url','');renderDocList();}
 function removeDoc(i){pendDocs.splice(i,1);renderDocList();}
 function renderDocList(){document.getElementById('pm-docs').innerHTML=pendDocs.map((d,i)=>'<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:13px;"><a href="'+d.url+'" target="_blank" style="color:#E8401C;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📎 '+d.name+'</a><button class="btn btn-xs btn-danger" onclick="removeDoc('+i+')">×</button></div>').join('');}
 function saveProject(){
@@ -1662,7 +1852,7 @@ function resetImp(){csvR=[];csvH=[];['imp-s1','imp-actions'].forEach(id=>documen
 
 // ── GMAIL INTEGRATION ──
 const GMAIL_CLIENT_ID='474158082238-a2ljv37029b8uvt5v0td8buc4e4b3a4g.apps.googleusercontent.com';
-const GMAIL_SCOPES='https://www.googleapis.com/auth/gmail.send';
+const GMAIL_SCOPES='https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly';
 let gmailAccessToken=null;
 let gmailUserEmail=null;
 let gmailTokenClient=null;
@@ -1683,6 +1873,8 @@ function initGmail(){
         gmailUserEmail=data.emailAddress;
         updateGmailStatus(true);
         showInApp('✅ Gmail connected','Sending as '+gmailUserEmail);
+        // Fetch Gmail signature for this user
+        fetchGmailSignature();
         // Store token — keyed by team member index so each person's Gmail persists
         const expiry=Date.now()+(response.expires_in*1000);
         const userKey='gmail_'+au();
@@ -1704,25 +1896,36 @@ function initGmail(){
   const storedExpiry=localStorage.getItem(userKey+'_expiry')||localStorage.getItem('gmail_expiry');
   if(storedEmail&&storedEmail!=='undefined'){
     gmailUserEmail=storedEmail;
+    // Always attempt a silent refresh on page load if we have a stored email
+    // This keeps Gmail connected without requiring the user to click anything
+    setTimeout(()=>{
+      if(gmailTokenClient){
+        gmailTokenClient.requestAccessToken({prompt:''});
+        console.log('Gmail: attempting silent refresh for',storedEmail);
+      }
+    },2000);
+    // Show connected status with stored email while refresh happens in background
     if(storedToken&&storedToken!=='undefined'&&storedExpiry&&Date.now()<parseInt(storedExpiry)){
       gmailAccessToken=storedToken;
       updateGmailStatus(true);
     } else {
-      // Token expired — show email with reconnect prompt
-      gmailAccessToken=null;
       const lbl=document.getElementById('gmail-label');
       const dot=document.getElementById('gmail-dot');
-      if(lbl){lbl.textContent=storedEmail+' (reconnect)';lbl.style.color='#f0a87a';}
+      if(lbl){lbl.textContent=storedEmail+' (reconnecting...)';lbl.style.color='#f0a87a';}
       if(dot)dot.style.background='#f0a87a';
-      // Try silent refresh
-      setTimeout(()=>{if(gmailTokenClient)gmailTokenClient.requestAccessToken({prompt:''});},2000);
     }
   } else {
-    // Clean up any bad 'undefined' values in storage
     ['gmail_email','gmail_token','gmail_expiry'].forEach(k=>{
       if(localStorage.getItem(k)==='undefined')localStorage.removeItem(k);
     });
   }
+  // Auto-refresh token every 45 minutes to stay connected
+  setInterval(()=>{
+    if(gmailUserEmail&&gmailTokenClient){
+      gmailTokenClient.requestAccessToken({prompt:''});
+      console.log('Gmail: auto-refreshing token');
+    }
+  },45*60*1000);
 }
 
 function restoreGmailForUser(){
@@ -1795,6 +1998,8 @@ function openGmailCompose(contactId,projectId){
     if(m.id!=='gmail-modal')m.classList.remove('open');
   });
   openModalFront('gmail-modal');
+  // Fetch signature if not yet loaded
+  if(!gmailSignature&&gmailAccessToken)fetchGmailSignature();
 }
 
 function loadDripTemplate(stage,contact){
@@ -1817,7 +2022,9 @@ function loadDripTemplate(stage,contact){
              .replace(/\[Your Name\]/g,mn(c.assignee)||'[Your Name]');
   }
   document.getElementById('gm-subject').value=subject;
-  document.getElementById('gm-body').value=body;
+  // Append signature to drip template body
+  const dripSig=getSignature();
+  document.getElementById('gm-body').value=body+(dripSig&&!body.includes(dripSig.trim())?dripSig:'');
 }
 
 function sendGmail(){
@@ -1828,10 +2035,13 @@ function sendGmail(){
   const to=document.getElementById('gm-to').value.trim();
   const cc=document.getElementById('gm-cc').value.trim();
   const subject=document.getElementById('gm-subject').value.trim();
-  const body=document.getElementById('gm-body').value.trim();
+  let body=document.getElementById('gm-body').value.trim();
   if(!to){alert('To address is required.');return;}
   if(!subject){alert('Subject is required.');return;}
   if(!body){alert('Email body is required.');return;}
+  // Append signature if not already present
+  const sig=getSignature();
+  if(sig&&!body.includes(sig.trim()))body=body+sig;
 
   const statusEl=document.getElementById('gm-send-status');
   statusEl.style.display='block';
@@ -2042,6 +2252,188 @@ function saveAgendaNote(contactId,key,value){
 let _zTop=100;
 function openModalFront(id){const el=document.getElementById(id);if(!el)return;_zTop+=10;el.style.zIndex=_zTop;el.classList.add('open');}
 function appendModalFront(el){_zTop+=10;el.style.zIndex=_zTop;document.body.appendChild(el);}
+
+
+// ── EMAIL SIGNATURE ──
+let gmailSignature='';
+function fetchGmailSignature(){
+  if(!gmailAccessToken)return;
+  fetch('https://gmail.googleapis.com/gmail/v1/users/me/settings/sendAs',{
+    headers:{'Authorization':'Bearer '+gmailAccessToken}
+  }).then(r=>r.json()).then(data=>{
+    const primary=(data.sendAs||[]).find(s=>s.isPrimary)||data.sendAs?.[0];
+    if(primary&&primary.signature){
+      // Strip HTML tags to get plain text signature
+      const tmp=document.createElement('div');
+      tmp.innerHTML=primary.signature;
+      gmailSignature='\n\n--\n'+tmp.innerText.trim();
+      console.log('✅ Gmail signature loaded');
+      // Store per user
+      localStorage.setItem('gmail_sig_'+au(), gmailSignature);
+    }
+  }).catch(e=>console.log('Signature fetch error:',e));
+}
+
+function getSignature(){
+  // Use fetched signature or fall back to stored one
+  if(gmailSignature)return gmailSignature;
+  const stored=localStorage.getItem('gmail_sig_'+au());
+  if(stored)return stored;
+  // Fallback: build from team member name
+  const name=mn(au());
+  return name?'\n\n--\n'+name+'\nBenchmark Construction & Development':'';
+}
+
+// ── BROADCAST EMAIL ──
+let bcSelectedIds=new Set();
+let bcAttachment=null; // {name, data (base64), mimeType}
+
+function renderBroadcast(){
+  // Update Gmail status indicator
+  const el=document.getElementById('bc-gmail-status');
+  if(el)el.textContent=gmailUserEmail?'✅ Sending as '+gmailUserEmail:'⚠️ Gmail not connected — click Connect Gmail in header';
+  renderBcContacts();
+}
+
+function handleBcFile(file){
+  if(!file)return;
+  const MAX=10*1024*1024; // 10MB limit
+  if(file.size>MAX){alert('File too large. Maximum size is 10MB.');return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const base64=e.target.result.split(',')[1];
+    bcAttachment={name:file.name,data:base64,mimeType:file.type||'application/octet-stream'};
+    document.getElementById('bc-file-label').innerHTML=`<strong style="color:var(--gn);">📎 ${file.name}</strong> (${(file.size/1024).toFixed(0)}KB) <a href="#" onclick="bcAttachment=null;document.getElementById('bc-file-label').textContent='Click or drag to attach a file';return false;" style="color:var(--rd);margin-left:8px;font-size:11px;">Remove</a>`;
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderBcContacts(){
+  const q=(document.getElementById('bc-search')?.value||'').toLowerCase();
+  const tf=document.getElementById('bc-type-filter')?.value||'';
+  const sf=document.getElementById('bc-stage-filter')?.value||'';
+  const list=S.contacts.filter(c=>
+    c.email &&
+    (!q||c.name?.toLowerCase().includes(q)||c.llc?.toLowerCase().includes(q)) &&
+    (!tf||c.contactType===tf) &&
+    (!sf||c.stage===sf)
+  );
+  const el=document.getElementById('bc-contact-list');
+  if(!list.length){el.innerHTML='<div style="padding:12px;font-size:13px;color:var(--text2);">No contacts with email addresses match the filter.</div>';updateBcCount();return;}
+  el.innerHTML=list.map((c,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);${i%2===1?'background:var(--bg2);':''}cursor:pointer;" onclick="toggleBcContact(${c.id},this)">
+      <input type="checkbox" ${bcSelectedIds.has(c.id)?'checked':''} onchange="toggleBcContact(${c.id},this.closest('div'))" onclick="event.stopPropagation()" style="flex-shrink:0;">
+      <div class="av ${avC(c.divisions)}" style="width:28px;height:28px;font-size:10px;flex-shrink:0;">${ini(c.name)}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;">${c.name}${c.llc?' <span style="font-weight:400;color:var(--text2);">/ '+c.llc+'</span>':''}</div>
+        <div style="font-size:11px;color:var(--text2);">${c.email} · ${c.contactType||'—'} · <span class="tag ${SC[c.stage]||''}" style="font-size:10px;">${c.stage}</span></div>
+      </div>
+    </div>`).join('');
+  updateBcCount();
+}
+
+function toggleBcContact(id,rowEl){
+  if(bcSelectedIds.has(id))bcSelectedIds.delete(id);
+  else bcSelectedIds.add(id);
+  // Update checkbox in that row
+  const cb=rowEl?.querySelector('input[type="checkbox"]');
+  if(cb)cb.checked=bcSelectedIds.has(id);
+  rowEl.style.background=bcSelectedIds.has(id)?'var(--orlt)':'';
+  updateBcCount();
+}
+
+function bcSelectAll(){
+  const q=(document.getElementById('bc-search')?.value||'').toLowerCase();
+  const tf=document.getElementById('bc-type-filter')?.value||'';
+  const sf=document.getElementById('bc-stage-filter')?.value||'';
+  S.contacts.filter(c=>c.email&&(!q||c.name?.toLowerCase().includes(q)||c.llc?.toLowerCase().includes(q))&&(!tf||c.contactType===tf)&&(!sf||c.stage===sf)).forEach(c=>bcSelectedIds.add(c.id));
+  renderBcContacts();
+}
+
+function bcClearAll(){bcSelectedIds.clear();renderBcContacts();}
+
+function updateBcCount(){
+  const el=document.getElementById('bc-selected-count');
+  if(el)el.textContent=bcSelectedIds.size+' recipient'+(bcSelectedIds.size!==1?'s':'')+' selected';
+}
+
+function bcPreview(){
+  const recipients=S.contacts.filter(c=>bcSelectedIds.has(c.id)&&c.email);
+  const el=document.getElementById('bc-preview-list');
+  if(!recipients.length){el.style.display='block';el.innerHTML='<div style="color:var(--rd);">No recipients selected with valid email addresses.</div>';return;}
+  el.style.display='block';
+  el.innerHTML=`<strong>${recipients.length} recipient${recipients.length!==1?'s':''}:</strong> ${recipients.map(c=>`${c.name} &lt;${c.email}&gt;`).join(', ')}`;
+}
+
+async function sendBroadcast(){
+  if(!gmailAccessToken){alert('Please connect your Gmail account first (click "Connect Gmail" in the header).');gmailSignIn();return;}
+  const subject=document.getElementById('bc-subject').value.trim();
+  const body=document.getElementById('bc-body').value.trim();
+  if(!subject){alert('Subject is required.');return;}
+  if(!body){alert('Message body is required.');return;}
+  const recipients=S.contacts.filter(c=>bcSelectedIds.has(c.id)&&c.email);
+  if(!recipients.length){alert('Please select at least one recipient with an email address.');return;}
+  if(!confirm(`Send to ${recipients.length} recipient${recipients.length!==1?'s':''}?`))return;
+
+  const statusEl=document.getElementById('bc-send-status');
+  statusEl.style.display='block';
+  statusEl.style.color='var(--text2)';
+
+  const sig=getSignature();
+  let sent=0,failed=0;
+
+  for(const c of recipients){
+    statusEl.textContent=`Sending ${sent+failed+1} of ${recipients.length}: ${c.name}...`;
+    try{
+      const personalBody=body+sig;
+      const firstName=c.name?c.name.split(' ')[0]:'there';
+      const finalBody=personalBody.replace(/\[First Name\]/g,firstName).replace(/\[Name\]/g,c.name);
+      await sendSingleGmail(c.email, subject, finalBody, bcAttachment);
+      // Log comm on contact
+      if(!c.comms)c.comms=[];
+      c.comms.unshift({type:'Email',outcome:'Sent',date:today(),notes:'Broadcast: '+subject,user:au(),id:S.nextId++,gmailSent:true});
+      c.lastActivity=today();
+      if(!c.log)c.log=[];
+      c.log.push({msg:'Broadcast email sent: '+subject,ts:ts(),user:au()});
+      sent++;
+      // Small delay to avoid Gmail rate limits
+      await new Promise(r=>setTimeout(r,300));
+    }catch(e){
+      console.error('Failed to send to '+c.email,e);
+      failed++;
+    }
+  }
+
+  auditL('Broadcast sent',`${sent} sent, ${failed} failed — "${subject}"`);
+  logA(`Broadcast: ${subject} → ${sent} contacts`,null);
+  saveState();
+  statusEl.style.color=failed>0?'var(--am)':'var(--gn)';
+  statusEl.textContent=`✅ Done! ${sent} sent${failed>0?' · '+failed+' failed (check console)':''}`;
+}
+
+function sendSingleGmail(to, subject, body, attachment){
+  return new Promise((resolve,reject)=>{
+    function encodeSubject(str){const bytes=Array.from(new TextEncoder().encode(str)).map(b=>String.fromCharCode(b)).join('');return '=?UTF-8?B?'+btoa(bytes)+'?=';}
+    function b64(str){const bytes=Array.from(new TextEncoder().encode(str)).map(b=>String.fromCharCode(b)).join('');return btoa(bytes);}
+    let raw;
+    if(attachment){
+      const boundary='bcboundary'+Date.now();
+      let msg=`From: ${gmailUserEmail}\r\nTo: ${to}\r\nSubject: ${encodeSubject(subject)}\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary="${boundary}"\r\n\r\n`;
+      msg+=`--${boundary}\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n${b64(body)}\r\n`;
+      msg+=`--${boundary}\r\nContent-Type: ${attachment.mimeType}; name="${attachment.name}"\r\nContent-Transfer-Encoding: base64\r\nContent-Disposition: attachment; filename="${attachment.name}"\r\n\r\n${attachment.data}\r\n`;
+      msg+=`--${boundary}--`;
+      raw=btoa(Array.from(new TextEncoder().encode(msg)).map(b=>String.fromCharCode(b)).join('')).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    } else {
+      let msg=`From: ${gmailUserEmail}\r\nTo: ${to}\r\nSubject: ${encodeSubject(subject)}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n${b64(body)}`;
+      raw=btoa(Array.from(new TextEncoder().encode(msg)).map(b=>String.fromCharCode(b)).join('')).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    }
+    fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+gmailAccessToken,'Content-Type':'application/json'},
+      body:JSON.stringify({raw})
+    }).then(r=>{if(r.ok)resolve();else r.json().then(e=>reject(new Error(e.error?.message||'Send failed'))).catch(reject);}).catch(reject);
+  });
+}
 
 // ── CLOSE MODALS ──
 document.querySelectorAll('.modal-overlay').forEach(ov=>{ov.addEventListener('click',e=>{if(e.target===ov){ov.classList.remove('open');if(ov.id==='import-modal')resetImp();}});});
