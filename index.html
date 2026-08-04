@@ -625,11 +625,12 @@ async function sbFetch(path,method='GET',body=null){
 }
 
 async function sbSave(){
+  localStorage.setItem(SK,JSON.stringify(S)); // Always save locally first
+  if(!_syncOnline){return;} // Skip remote save when offline — will sync on reconnect
   try{
     const payload={key:'crm_data',value:S};
     await sbFetch('crm_state?key=eq.crm_data','DELETE');
     await sbFetch('crm_state','POST',[payload]);
-    localStorage.setItem(SK,JSON.stringify(S));
     console.log('✅ Saved to Supabase');
     // Flash a tiny save indicator
     const dot=document.getElementById('save-dot');
@@ -670,28 +671,56 @@ async function sbLoad(){
 function load(){try{const r=localStorage.getItem(SK);if(r){const d=JSON.parse(r);S={...S,...d};}}catch(e){}}
 function saveState(){sbSave();}
 
-// Real-time sync via polling every 10 seconds
-let lastSaveTime=Date.now();
-let syncPaused=false;
+// Real-time sync with backoff — stops spamming when Supabase is unreachable
+let _syncOnline=true;
+let _syncFailCount=0;
+let _syncInterval=null;
+
+function startSyncPolling(){
+  if(_syncInterval)clearInterval(_syncInterval);
+  _syncInterval=setInterval(syncFromServer,10000);
+}
+
 async function syncFromServer(){
-  if(syncPaused)return;
+  // If we've failed too many times, slow way down (every 5 min) until back online
+  if(_syncFailCount>=3){
+    if(_syncInterval)clearInterval(_syncInterval);
+    _syncInterval=setInterval(syncFromServer,5*60*1000);
+  }
   try{
     const rows=await sbFetch('crm_state?key=eq.crm_data&select=value');
-    if(rows&&rows.length>0){
-      const d=rows[0].value;
-      if(d.nextId>S.nextId){
-        S={...S,...d};
-        localStorage.setItem(SK,JSON.stringify(S));
-        rebuildSel();renderDB();renderFeed();renderRadar();updateBadge();
-        showInApp('CRM updated','New changes synced from your team');
+    if(rows!==null){
+      // Connection restored
+      if(!_syncOnline){
+        _syncOnline=true;_syncFailCount=0;
+        if(_syncInterval)clearInterval(_syncInterval);
+        _syncInterval=setInterval(syncFromServer,10000);
+        showInApp('✅ Reconnected','Syncing data with server...');
+        sbSave(); // Push local changes up
       }
+      if(rows.length>0){
+        const d=rows[0].value;
+        if(d.nextId>S.nextId){
+          S={...S,...d};
+          localStorage.setItem(SK,JSON.stringify(S));
+          rebuildSel();renderDB();renderFeed();renderRadar();updateBadge();
+          showInApp('CRM updated','New changes synced from your team');
+        }
+      }
+      _syncFailCount=0;
+      // Only check form submissions when connected
+      checkFormSubmissions();
     }
-  }catch(e){}
-  // Check for new form submissions
-  checkFormSubmissions();
+  }catch(e){
+    _syncFailCount++;
+    _syncOnline=false;
+    // Log only on first failure, not every poll
+    if(_syncFailCount===1)console.warn('Supabase unreachable — working offline. Will retry every 5 min.');
+  }
 }
 
 async function checkFormSubmissions(){
+  if(!_syncOnline)return; // Don't attempt when we know we're offline
   try{
     const rows=await sbFetch('form_submissions?select=id,data&order=id.desc&limit=20');
     // Also check questionnaire submissions
@@ -755,6 +784,7 @@ async function checkFormSubmissions(){
 }
 
 async function checkQuestionnaireSubmissions(){
+  if(!_syncOnline)return; // Don't attempt when offline
   try{
     const rows=await sbFetch('questionnaire_submissions?select=id,data,contact_id&order=id.desc&limit=20');
     if(!rows||!rows.length)return;
@@ -865,7 +895,7 @@ function renderDB(){
   const myT=viewMode==='my'?S.tasks.filter(t=>t.assignee==me):S.tasks;
   const myProjs=viewMode==='my'?(S.projects||[]).filter(p=>p.assignee==me):(S.projects||[]);
   const tv=myProjs.filter(x=>x.stage==='Planning').reduce((s,x)=>s+(Number(x.estimatedCost)||0),0);
-  const wt=myProjs.filter(x=>!['Won','Lost'].includes(x.stage)).reduce((s,x)=>s+(Number(x.estimatedCost)||0)*((SPROB[x.stage]||0)/100),0);
+  const wt=myProjs.filter(x=>x.stage==='Planning').reduce((s,x)=>s+(Number(x.estimatedCost)||0)*((SPROB[x.stage]||0)/100),0);
   const ov=myT.filter(t=>!t.done&&t.due&&t.due<tod).length;
   const mine=myT.filter(t=>!t.done&&t.assignee==me).length;
   const wonV=myProjs.filter(x=>x.stage==='Won').reduce((s,x)=>s+(Number(x.estimatedCost)||0),0);
@@ -900,9 +930,9 @@ function renderCompanyOverview(){
   const projs=S.projects||[];
   const wonV=projs.filter(x=>x.stage==='Won').reduce((s,x)=>s+(Number(x.estimatedCost)||0),0);
   const lostV=projs.filter(x=>x.stage==='Lost').reduce((s,x)=>s+(Number(x.estimatedCost)||0),0);
-  const pipeV=projs.filter(x=>!['Won','Lost'].includes(x.stage)).reduce((s,x)=>s+(Number(x.estimatedCost)||0),0);
-  const totalV=projs.reduce((s,x)=>s+(Number(x.estimatedCost)||0),0);
-  const weighted=projs.filter(x=>!['Won','Lost'].includes(x.stage)).reduce((s,x)=>s+(Number(x.estimatedCost)||0)*((SPROB[x.stage]||0)/100),0);
+  const pipeV=projs.filter(x=>x.stage==='Planning').reduce((s,x)=>s+(Number(x.estimatedCost)||0),0);
+  const totalV=projs.filter(x=>['Won','Planning'].includes(x.stage)).reduce((s,x)=>s+(Number(x.estimatedCost)||0),0);
+  const weighted=projs.filter(x=>x.stage==='Planning').reduce((s,x)=>s+(Number(x.estimatedCost)||0)*((SPROB[x.stage]||0)/100),0);
   const won=projs.filter(x=>x.stage==='Won').length;
   const lost=projs.filter(x=>x.stage==='Lost').length;
   const wr=won+lost>0?Math.round(won/(won+lost)*100):0;
@@ -934,7 +964,7 @@ function renderCompanyOverview(){
   const divHtml=divs.map(d=>{
     const dc=c.filter(x=>x.divisions&&x.divisions.includes(d));
     const dWon=projs.filter(x=>x.division===d&&x.stage==='Won').reduce((s,x)=>s+(Number(x.estimatedCost)||0),0);
-    const dPipe=projs.filter(x=>x.division===d&&!['Won','Lost'].includes(x.stage)).reduce((s,x)=>s+(Number(x.estimatedCost)||0),0);
+    const dPipe=projs.filter(x=>x.division===d&&x.stage==='Planning').reduce((s,x)=>s+(Number(x.estimatedCost)||0),0);
     const dWonCount=projs.filter(x=>x.division===d&&x.stage==='Won').length;
     return`<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
@@ -957,7 +987,7 @@ function renderCompanyOverview(){
         <div style="font-size:11px;color:var(--gn);margin-top:2px;">${won} project${won!==1?'s':''} · ${wr}% win rate</div>
       </div>
       <div style="text-align:center;padding:12px;background:var(--bllt);border-radius:var(--r);">
-        <div style="font-size:11px;color:var(--bl);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Active pipeline</div>
+        <div style="font-size:11px;color:var(--bl);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">In Planning</div>
         <div style="font-size:22px;font-weight:700;color:var(--bl);margin-top:3px;">$${pipeV.toLocaleString()}</div>
         <div style="font-size:11px;color:var(--bl);margin-top:2px;">Weighted: $${Math.round(weighted).toLocaleString()}</div>
       </div>
@@ -967,7 +997,7 @@ function renderCompanyOverview(){
         <div style="font-size:11px;color:var(--rd);margin-top:2px;">${lost} project${lost!==1?'s':''}</div>
       </div>
       <div style="text-align:center;padding:12px;background:var(--bg2);border-radius:var(--r);">
-        <div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Total tracked</div>
+        <div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Won + Planning</div>
         <div style="font-size:22px;font-weight:700;color:var(--text);margin-top:3px;">$${totalV.toLocaleString()}</div>
         <div style="font-size:11px;color:var(--text3);margin-top:2px;">${c.length} contact${c.length!==1?'s':''}</div>
       </div>
@@ -2466,8 +2496,8 @@ sbLoad().then(loaded=>{
   hideSyncStatus();
   setTimeout(checkNotif,30000);
   setInterval(checkNotif,15*60*1000);
-  // Poll for team changes every 10 seconds
-  setInterval(syncFromServer,10000);
+  // Poll for team changes (with backoff when offline)
+  startSyncPolling();
   // Init Gmail after Google script loads
   setTimeout(initGmail,1000);
 });
