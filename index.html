@@ -199,6 +199,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <select id="csf" onchange="renderContacts()"><option value="">All stages</option><option>Contact</option><option>Discovery Meeting</option><option>Strategy Meeting</option><option>Proposal</option><option>Planning</option><option>Contract</option><option>Won</option><option>Lost</option></select>
     <select id="ctf" onchange="renderContacts()"><option value="">All types</option><option>Agent</option><option>Investor</option><option>Lender</option><option>Wholesaler</option><option>Referral Partner</option><option>Homeowner</option><option>Other</option></select>
     <select id="caf" onchange="renderContacts()"><option value="">All assignees</option></select>
+    <select id="csort" onchange="renderContacts()">
+      <option value="name">Sort: Name A–Z</option>
+      <option value="name-desc">Sort: Name Z–A</option>
+      <option value="stage">Sort: Stage</option>
+      <option value="type">Sort: Type</option>
+      <option value="value-desc">Sort: Value ↓</option>
+      <option value="value-asc">Sort: Value ↑</option>
+      <option value="assignee">Sort: Assignee</option>
+      <option value="activity">Sort: Last Activity</option>
+      <option value="created">Sort: Newest</option>
+    </select>
+    <div style="display:flex;gap:4px;border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;">
+      <button id="c-view-card" class="btn btn-sm" style="border:none;border-radius:0;background:#E8401C;color:#fff;" onclick="setCView('card')" title="Card view">⊞</button>
+      <button id="c-view-list" class="btn btn-sm" style="border:none;border-radius:0;" onclick="setCView('list')" title="List view">≡</button>
+    </div>
     <button class="btn btn-primary" onclick="openContactModal()">+ Add</button>
     <button class="btn btn-success" onclick="openImportModal()">⬆ Import</button>
     <button class="btn" onclick="exportFiltered()">⬇ Export</button>
@@ -240,6 +255,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   <div class="toolbar">
     <select id="tf" onchange="renderTasks()"><option value="">All tasks</option><option value="mine">My tasks</option><option value="overdue">Overdue</option><option value="today">Due today</option><option value="upcoming">Upcoming (7d)</option><option value="recurring">Recurring</option><option value="done">Completed</option></select>
     <select id="taf" onchange="renderTasks()"><option value="">All assignees</option></select>
+    <div style="display:flex;gap:4px;border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;">
+      <button id="t-view-list" class="btn btn-sm" style="border:none;border-radius:0;background:#E8401C;color:#fff;" onclick="setTView('list')" title="List view">≡</button>
+      <button id="t-view-month" class="btn btn-sm" style="border:none;border-radius:0;" onclick="setTView('month')" title="Month view">▦</button>
+    </div>
     <button class="btn btn-primary" onclick="openTaskModal(null)">+ Add task</button>
   </div>
   <div class="card"><div id="tasks-list"></div></div>
@@ -598,7 +617,7 @@ function myFilter(assignee){
   if(viewMode==='company')return true;
   return assignee==au();
 }
-let S={contacts:[],tasks:[],projects:[],activity:[],auditLog:[],nextId:1,team:['Team Member 1','Team Member 2','Team Member 3','Team Member 4'],roles:{},agingDays:{Contact:14,'Discovery Meeting':10,'Strategy Meeting':10,Proposal:14},radarDays:{hot:30,warm:60},goals:{monthly:0,quarterly:0,annual:0,byMember:{},byDivision:{}}};
+let S={contacts:[],tasks:[],projects:[],activity:[],auditLog:[],emailJobs:[],nextId:1,team:['Team Member 1','Team Member 2','Team Member 3','Team Member 4'],roles:{},agingDays:{Contact:14,'Discovery Meeting':10,'Strategy Meeting':10,Proposal:14},radarDays:{hot:30,warm:60},goals:{monthly:0,quarterly:0,annual:0,byMember:{},byDivision:{}}};
 const DS={'Land Development':'Land Dev','Residential Investment Renovations':'RI Reno','Residential Investment New Construction':'RI New Const','Custom Homes':'Custom Homes'};
 const DC={'Land Development':'tl','Residential Investment Renovations':'tr','Residential Investment New Construction':'tn','Custom Homes':'tc'};
 const DA={'Land Development':'av-l','Residential Investment Renovations':'av-r','Residential Investment New Construction':'av-n','Custom Homes':'av-c'};
@@ -1197,7 +1216,8 @@ function renderTasks(){
   else if(fil==='done')list=list.filter(t=>t.done);
   if(af!==''&&af!=null)list=list.filter(t=>t.assignee==af);
   const el=document.getElementById('tasks-list');
-  if(!list.length){el.innerHTML='<div class="empty">No tasks here.</div>';return;}
+  if(tView==='month'){renderTaskMonth(list);updateBadge();return;}
+  if(!list.length){el.innerHTML='<div class="empty">No tasks here.</div>';updateBadge();return;}
   el.innerHTML=list.map(t=>{
     const lp=t.projectId?(S.projects||[]).find(p=>p.id==t.projectId):null;
     const lc=t.contactId?S.contacts.find(c=>c.id==t.contactId):null;
@@ -1213,6 +1233,52 @@ function renderTasks(){
     </div>`;
   }).join('');
   updateBadge();
+}
+let tView='list';
+let tMonthCursor='';
+function setTView(v){
+  tView=v==='month'?'month':'list';
+  const lb=document.getElementById('t-view-list'),mb=document.getElementById('t-view-month');
+  if(lb){lb.style.background=tView==='list'?'#E8401C':'';lb.style.color=tView==='list'?'#fff':'';}
+  if(mb){mb.style.background=tView==='month'?'#E8401C':'';mb.style.color=tView==='month'?'#fff':'';}
+  renderTasks();
+}
+function shiftTaskMonth(n){
+  if(!tMonthCursor)tMonthCursor=today().slice(0,7);
+  const parts=tMonthCursor.split('-').map(Number);
+  const d=new Date(parts[0],parts[1]-1+(n||0),1);
+  tMonthCursor=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  renderTasks();
+}
+function renderTaskMonth(list){
+  const el=document.getElementById('tasks-list');if(!el)return;
+  if(!tMonthCursor)tMonthCursor=today().slice(0,7);
+  const parts=tMonthCursor.split('-').map(Number);
+  const y=parts[0],m=parts[1];
+  const first=new Date(y,m-1,1);
+  const startDow=first.getDay();
+  const daysIn=new Date(y,m,0).getDate();
+  const label=first.toLocaleString(undefined,{month:'long',year:'numeric'});
+  const byDay={};
+  (list||[]).forEach(t=>{
+    if(!t.due||t.due.slice(0,7)!==tMonthCursor)return;
+    const day=parseInt(t.due.slice(8,10),10);
+    if(!byDay[day])byDay[day]=[];
+    byDay[day].push(t);
+  });
+  let cells='';
+  for(let i=0;i<startDow;i++)cells+='<div style="min-height:88px;background:var(--bg2);border:1px solid var(--border);"></div>';
+  for(let d=1;d<=daysIn;d++){
+    const iso=tMonthCursor+'-'+String(d).padStart(2,'0');
+    const isToday=iso===today();
+    const items=(byDay[d]||[]).map(t=>'<div style="font-size:11px;padding:2px 0;display:flex;gap:3px;align-items:flex-start;'+(t.done?'text-decoration:line-through;color:var(--text2);':'')+'"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+String(t.title||'').replace(/"/g,'&quot;')+'">'+(t.title||'')+'</span>'+(t.due?'<button style="background:none;border:none;cursor:pointer;font-size:12px;padding:0;line-height:1;" onclick="event.stopPropagation();expTaskICS('+t.id+')" title="Add to calendar">📅</button>':'')+'</div>').join('');
+    cells+='<div style="min-height:88px;border:1px solid var(--border);padding:4px 6px;background:'+(isToday?'var(--orlt)':'#fff')+';"><div style="font-size:11px;font-weight:700;margin-bottom:3px;'+(isToday?'color:#E8401C;':'')+'">'+d+'</div>'+items+'</div>';
+  }
+  const undated=(list||[]).filter(t=>!t.due);
+  el.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><button class="btn btn-sm" onclick="shiftTaskMonth(-1)">←</button><strong style="font-size:14px;">'+label+'</strong><button class="btn btn-sm" onclick="shiftTaskMonth(1)">→</button></div>'
+    +'<div style="display:grid;grid-template-columns:repeat(7,1fr);font-size:11px;font-weight:700;color:var(--text2);text-align:center;margin-bottom:4px;">'+['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>'<div>'+d+'</div>').join('')+'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(7,1fr);">'+cells+'</div>'
+    +(undated.length?'<div style="margin-top:12px;font-size:12px;color:var(--text2);">No due date: '+undated.map(t=>t.title).join(', ')+'</div>':'');
 }
 // ── DEALS ──
 let projView='card';
@@ -1518,7 +1584,7 @@ function reqNotif(){if(!('Notification'in window)){alert('Not supported.');retur
 function fireNotif(title,body){if(Notification.permission==='granted')new Notification(title,{body});showInApp(title,body);}
 function showInApp(title,body){const p=document.getElementById('notif-panel'),d=document.createElement('div');d.className='notif-item';d.innerHTML=`<div>🔔</div><div><strong>${title}</strong><div style="font-size:12px;color:var(--text2);margin-top:2px;">${body}</div></div><div class="ni-close" onclick="this.closest('.notif-item').remove();">✕</div>`;p.appendChild(d);p.classList.add('open');setTimeout(()=>{d.remove();if(!p.children.length)p.classList.remove('open');},8000);}
 function toggleNotif(){document.getElementById('notif-panel').classList.toggle('open');}
-function checkNotif(){const tod=today(),me=au();const ov=S.tasks.filter(t=>!t.done&&t.due&&t.due<tod&&t.assignee==me);const dt=S.tasks.filter(t=>!t.done&&t.due===tod&&t.assignee==me);if(ov.length)fireNotif(ov.length+' overdue task'+(ov.length>1?'s':''),ov.slice(0,2).map(t=>t.title).join(', '));if(dt.length)fireNotif(dt.length+' task'+(dt.length>1?'s':'')+' due today',dt.slice(0,2).map(t=>t.title).join(', '));}
+function checkNotif(){const tod=today(),me=au();const ov=S.tasks.filter(t=>!t.done&&t.due&&t.due<tod&&t.assignee==me);const dt=S.tasks.filter(t=>!t.done&&t.due===tod&&t.assignee==me);if(ov.length)fireNotif(ov.length+' overdue task'+(ov.length>1?'s':''),ov.slice(0,2).map(t=>t.title).join(', '));if(dt.length)fireNotif(dt.length+' task'+(dt.length>1?'s':'')+' due today',dt.slice(0,2).map(t=>t.title).join(', '));processDueEmailJobs();}
 // ── CONTACT MODAL ──
 let editId=null;
 function openContactModal(id){
@@ -1666,7 +1732,66 @@ function syncTaskContact(pid){const p=(S.projects||[]).find(x=>x.id==parseInt(pi
 function saveTask(){const title=document.getElementById('tm-title').value.trim();if(!title)return alert('Title required.');const pid=document.getElementById('tm-project')?.value||null;const cid=document.getElementById('tm-contact').value||null;const p=pid?(S.projects||[]).find(x=>x.id==parseInt(pid)):null;const c=cid?S.contacts.find(x=>x.id==parseInt(cid)):null;S.tasks.push({id:S.nextId++,title,projectId:pid?parseInt(pid):null,contactId:cid?parseInt(cid):(p&&p.contactId?p.contactId:null),assignee:parseInt(document.getElementById('tm-assign').value),due:document.getElementById('tm-due').value||'',type:document.getElementById('tm-type').value,notes:document.getElementById('tm-notes').value.trim(),done:false,recur:document.getElementById('tm-recur').value||''});logA('Task: '+title+(p?' for '+p.name:c?' for '+c.name:''),null);auditL('Task created',title);saveState();closeModal('task-modal');renderTasks();updateBadge();}
 function togTask(id){const t=S.tasks.find(x=>x.id==id);if(!t)return;t.done=!t.done;if(t.done&&t.recur&&RDAYS[t.recur]){const nd=addDays(t.due||today(),RDAYS[t.recur]);S.tasks.push({id:S.nextId++,title:t.title,projectId:t.projectId||null,contactId:t.contactId||null,assignee:t.assignee,due:nd,type:t.type,notes:t.notes,done:false,recur:t.recur,auto:true});showInApp('Recurring task scheduled','"'+t.title+'" next due: '+nd);}const p=t.projectId?(S.projects||[]).find(x=>x.id==t.projectId):null;if(p){p.lastActivity=today();if(!p.log)p.log=[];p.log.push({msg:'Task '+(t.done?'done':'reopened')+': '+t.title,ts:ts(),user:au()});}const c=t.contactId?S.contacts.find(x=>x.id==t.contactId):null;if(c)c.lastActivity=today();logA('Task '+(t.done?'done':'reopened')+': '+t.title,t.contactId||null);saveState();renderTasks();updateBadge();}
 function delTask(id){if(!canEdit()){alert('Read-only access.');return;}if(!confirm('Delete?'))return;S.tasks=S.tasks.filter(t=>t.id!=id);saveState();renderTasks();updateBadge();}
-function genSeq(projectId,stage,assignee,contactId){const steps=(S.customSeq||SEQ)[stage];if(!steps)return;steps.forEach(s=>S.tasks.push({id:S.nextId++,title:s.title,projectId:projectId||null,contactId:contactId||null,assignee:assignee??au(),due:addDays(today(),s.day),type:s.type,notes:s.notes,done:false,auto:true}));}
+function genSeq(projectId,stage,assignee,contactId){const steps=(S.customSeq||SEQ)[stage];if(!steps)return;steps.forEach(s=>{const task={id:S.nextId++,title:s.title,projectId:projectId||null,contactId:contactId||null,assignee:assignee??au(),due:addDays(today(),s.day),type:s.type,notes:s.notes,done:false,auto:true};S.tasks.push(task);if(s.type==='Email')createPlaybookEmailJob(task);});}
+function dripForNotes(notes){const m=String(notes||'').match(/Email Drip Stage\s*([1-4])/i);if(!m)return null;return DRIP[parseInt(m[1],10)-1]||null;}
+function createPlaybookEmailJob(task){
+  if(!S.emailJobs)S.emailJobs=[];
+  const drip=dripForNotes(task.notes);
+  S.emailJobs.push({id:S.nextId++,taskId:task.id,contactId:task.contactId||null,projectId:task.projectId||null,assignee:task.assignee,due:task.due||'',title:task.title||'',notes:task.notes||'',dripStage:drip?drip.stage:null,status:drip?'scheduled':'draft',sentAt:'',error:''});
+}
+function jobContact(job){
+  let c=job.contactId?S.contacts.find(x=>x.id==job.contactId):null;
+  if(!c&&job.projectId){const p=(S.projects||[]).find(x=>x.id==job.projectId);if(p&&p.contactId)c=S.contacts.find(x=>x.id==p.contactId);}
+  if(!c&&job.projectId)c=S.contacts.find(x=>x.id==job.projectId);
+  return c||null;
+}
+function fillDrip(drip,c){
+  let subject=drip.subject,body=drip.body;
+  const firstName=c.name?c.name.split(' ')[0]:'[First Name]';
+  const llc=c.llc||'[LLC Name]';
+  const value=c.value?'$'+Number(c.value).toLocaleString():'[Amount]';
+  const division=(c.divisions&&c.divisions[0])||'[Division]';
+  subject=subject.replace(/\[Project Name\]/g,llc).replace(/\[Project\/Goal\]/g,llc);
+  body=body.replace(/\[First Name\]/g,firstName).replace(/\[LLC Name\]/g,llc).replace(/\[Amount\]/g,value).replace(/\[Division\]/g,DS[division]||division).replace(/\[Your Name\]/g,mn(c.assignee)||mn(au())||'[Your Name]');
+  const sig=getSignature();
+  if(sig&&!body.includes(sig.trim()))body=body+sig;
+  return {subject,body};
+}
+let _emailJobsBusy=false;
+async function processDueEmailJobs(){
+  if(_emailJobsBusy||!gmailAccessToken)return;
+  if(!S.emailJobs||!S.emailJobs.length)return;
+  const tod=today();
+  const due=S.emailJobs.filter(j=>j.status==='scheduled'&&j.due&&j.due<=tod);
+  if(!due.length)return;
+  _emailJobsBusy=true;
+  let changed=false;
+  try{
+    for(const job of due){
+      if(job.status!=='scheduled')continue;
+      const drip=DRIP.find(d=>d.stage===job.dripStage);
+      const c=jobContact(job);
+      if(!drip||!c||!c.email){job.status='failed';job.error=!drip?'No drip template':!c?'No contact':'No email';changed=true;continue;}
+      const msg=fillDrip(drip,c);
+      try{
+        await sendSingleGmail(c.email,msg.subject,msg.body,null);
+        job.status='sent';job.sentAt=today();job.error='';
+        if(!c.comms)c.comms=[];
+        c.comms.unshift({type:'Email',outcome:'Sent',date:today(),notes:'Playbook: '+msg.subject,user:au(),id:S.nextId++,gmailSent:true,auto:true});
+        c.lastActivity=today();
+        if(!c.log)c.log=[];
+        c.log.push({msg:'Auto email sent: '+msg.subject,ts:ts(),user:au()});
+        logA('Auto email sent to '+c.name,c.id);
+        changed=true;
+      }catch(e){
+        job.status='failed';job.error=(e&&e.message)||'Send failed';changed=true;
+      }
+    }
+  }finally{
+    _emailJobsBusy=false;
+    if(changed)saveState();
+  }
+}
 
 // ── DEAL CRUD ──
 let pendDocs=[];
@@ -1905,6 +2030,7 @@ function initGmail(){
         showInApp('✅ Gmail connected','Sending as '+gmailUserEmail);
         // Fetch Gmail signature for this user
         fetchGmailSignature();
+        processDueEmailJobs();
         // Store token — keyed by team member index so each person's Gmail persists
         const expiry=Date.now()+(response.expires_in*1000);
         const userKey='gmail_'+au();
@@ -1938,6 +2064,7 @@ function initGmail(){
     if(storedToken&&storedToken!=='undefined'&&storedExpiry&&Date.now()<parseInt(storedExpiry)){
       gmailAccessToken=storedToken;
       updateGmailStatus(true);
+      processDueEmailJobs();
     } else {
       const lbl=document.getElementById('gmail-label');
       const dot=document.getElementById('gmail-dot');
@@ -2007,6 +2134,7 @@ function gmailSignIn(){
 function openGmailCompose(contactId,projectId){
   gmailComposeContactId=contactId;
   window._gmailProjectId=projectId||null;
+  window._gmailQuestionnaire=false;
   const c=S.contacts.find(x=>x.id==contactId);
   if(!c)return;
   // Check auth
@@ -2033,6 +2161,7 @@ function openGmailCompose(contactId,projectId){
 }
 
 function loadDripTemplate(stage,contact){
+  window._gmailQuestionnaire=false;
   const c=contact||(gmailComposeContactId?S.contacts.find(x=>x.id==gmailComposeContactId):null);
   const drip=DRIP.find(d=>d.stage===stage);
   if(!drip)return;
@@ -2116,6 +2245,11 @@ function sendGmail(){
           c.lastActivity=today();
           if(!c.log)c.log=[];
           c.log.push({msg:'Email sent: '+subject,ts:ts(),user:au()});
+          if(window._gmailQuestionnaire){
+            c.log.push({msg:'Project questionnaire sent',ts:ts(),user:au()});
+            logA('Questionnaire sent to '+c.name,gmailComposeContactId);
+            window._gmailQuestionnaire=false;
+          }
           logA('Email sent to '+c.name,gmailComposeContactId);
           auditL('Email sent',c.name+' — '+subject);
           if(window._gmailProjectId){const eProj=(S.projects||[]).find(pp=>pp.id==window._gmailProjectId);if(eProj){if(!eProj.log)eProj.log=[];eProj.log.push({msg:'Email sent: '+subject,ts:ts(),user:au()});eProj.lastActivity=today();}}
@@ -2200,16 +2334,12 @@ function sendQuestionnaire(contactId){
 
   // Pre-fill Gmail compose
   openGmailCompose(contactId);
+  window._gmailQuestionnaire=true;
   setTimeout(()=>{
     setVal('gm-subject',subject);
     setVal('gm-body',body);
     setVal('gm-to',c.email);
   },100);
-  // Log that questionnaire was sent
-  if(!c.log)c.log=[];
-  c.log.push({msg:'Project questionnaire sent',ts:ts(),user:au()});
-  logA('Questionnaire sent to '+c.name,contactId);
-  saveState();
 }
 
 // ── DISCOVERY MEETING AGENDA ──
